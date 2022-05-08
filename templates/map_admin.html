@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tesla ETA Admin</title>
+</head>
+<body>
+<table>
+    <tr>
+        <td><b>Expiry</b></td>
+        <td><b>Lat</b></td>
+        <td><b>Long</b></td>
+        <td><b>URL</b></td>
+    </tr>
+    {% for row in result %}
+    <tr>
+        <td>{{ row[3]|fromtimestamp }}</td>
+        <td>{{ row[1] }}</td>
+        <td>{{ row[2] }}</td>
+        <td><a href="/map/{{ row[0] }}">{{ row[0] }}</a></td>
+    </tr>
+    {% endfor %}
+</table>
+
+
+<form class="generated-form"  method="POST" action="/map/admin"  target="_self">
+   <label for="lat">Lat</label><br>
+   <input type="text" id="lat" name="lat"><br>
+   <label for="lng">Lng:</label><br>
+   <input type="text" id="lng" name="lng"><br>
+   <label for="expiry">Expiry:</label><br>
+   <input type="datetime-local" id="expiry" name="expiry"><br>
+   <input type="submit" value="Submit"><br><br>
+</form>
+</body>
+</html>

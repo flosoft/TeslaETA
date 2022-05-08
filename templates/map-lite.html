@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Tesla - ShareMyETA</title>
+    <meta name="robots" content="noindex, nofollow"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v2.8.1/mapbox-gl.js"></script>
+    <link
+            href="https://api.tiles.mapbox.com/mapbox-gl-js/v2.8.1/mapbox-gl.css"
+            rel="stylesheet"
+    />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+    <script src="https://js.sentry-cdn.com/9c5feb5b248b49f79a585804c259febc.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="map"></div>
+<script>
+    // an arbitrary start will always be the same
+    // only the end or destination will change
+    const start = {{ start }};
+    const end = {{ end }};
+
+    // create map
+    mapboxgl.accessToken = '{{ mbtoken }}';
+    const map = new mapboxgl.Map({
+        container: 'map', // container id
+        style: 'mapbox://styles/mapbox/navigation-guidance-day-v4', // stylesheet location
+        zoom: 12,
+        center: start
+    });
+
+    // create a function to make a directions request
+    async function getRoute(end) {
+        // make directions request using driving-traffic profile
+        const query = await fetch(
+            `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${start[0]},${start[1]};${end[0]},${end[1]}?steps=true&geometries=geojson&overview=full&access_token=${mapboxgl.accessToken}`,
+            {method: 'GET'}
+        );
+        const json = await query.json();
+        const data = json.routes[0];
+        const route = data.geometry.coordinates;
+        const geojson = {
+            'type': 'Feature',
+            'properties': {},
+            'geometry': {
+                'type': 'LineString',
+                'coordinates': route
+            }
+        };
+        // if the route already exists on the map, we'll reset it using setData
+        if (map.getSource('route')) {
+            map.getSource('route').setData(geojson);
+        }
+        // otherwise, we'll make a new request
+        else {
+            map.addLayer({
+                'id': 'route',
+                'type': 'line',
+                'source': {
+                    'type': 'geojson',
+                    'data': geojson
+                },
+                'layout': {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                'paint': {
+                    'line-color': '#3887be',
+                    'line-width': 5,
+                    'line-opacity': 0.75
+                }
+            });
+        }
+    }
+
+
+
+
+    map.on('load', async () => {
+        // ROUTING LOGIC //
+
+
+        // make an initial directions request that
+        // starts and ends at the same location
+        getRoute(start);
+
+        // Add destination to the map
+        map.addLayer({
+            'id': 'point',
+            'type': 'circle',
+            'source': {
+                'type': 'geojson',
+                'data': {
+                    'type': 'FeatureCollection',
+                    'features': [
+                        {
+                            'type': 'Feature',
+                            'properties': {},
+                            'geometry': {
+                                'type': 'Point',
+                                'coordinates': end
+                            }
+                        }
+                    ]
+                }
+            },
+            'paint': {
+                'circle-radius': 10,
+                'circle-color': '#f30'
+            }
+        });
+
+        // allow the user to click the map to change the destination
+        // Set route destination
+        getRoute(end)
+
+
+
+        // UPDATE CAR LOCATION BELOW //
+
+        // Get the initial location of the car.
+        const geojson = await getLocation();
+        // Add the ISS location as a source.
+        map.addSource('car', {
+            type: 'geojson',
+            data: geojson
+        });
+        // Add the rocket symbol layer to the map.
+        map.addLayer({
+            'id': 'car',
+            'type': 'symbol',
+            'source': 'car',
+            'layout': {
+                // This icon is a part of the Mapbox Streets style.
+                // To view all images available in a Mapbox style, open
+                // the style in Mapbox Studio and click the "Images" tab.
+                // To add a new image to the style at runtime see
+                // https://docs.mapbox.com/mapbox-gl-js/example/add-image/
+                'icon-image': 'car-15'
+            }
+        });
+
+        // Update the source from the API every 5 seconds.
+        const updateSource = setInterval(async () => {
+            const geojson = await getLocation(updateSource);
+            map.getSource('car').setData(geojson);
+        }, 5000);
+
+        async function getLocation(updateSource) {
+            // Make a GET request to the API and return the location of the car.
+            try {
+                const response = await fetch(
+                    '/carstate',
+                    {method: 'GET'}
+                );
+                const {latitude, longitude} = await response.json();
+                // Fly the map to the location.
+                map.flyTo({
+                    center: [longitude, latitude],
+                    speed: 0.5
+                });
+
+                // ONE CUSTOM BLOCK HERE
+
+                // Return the location of the car as GeoJSON.
+                return {
+                    'type': 'FeatureCollection',
+                    'features': [
+                        {
+                            'type': 'Feature',
+                            'geometry': {
+                                'type': 'Point',
+                                'coordinates': [longitude, latitude]
+                            }
+                        }
+                    ]
+                };
+            } catch (err) {
+                // If the updateSource interval is defined, clear the interval to stop updating the source.
+                if (updateSource) clearInterval(updateSource);
+                throw new Error(err);
+            }
+        }
+
+    });
+
+    // While driving = true (TL)
+    // On-Load get trip_distance (TL)
+    // On-Load calculate ETA
+</script>
+</body>
+</html>
