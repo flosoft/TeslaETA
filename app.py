@@ -53,7 +53,7 @@ def map(shortuuid):
 
 @app.route('/carstate')
 def carstate():  # put application's code here
-    r = requests.get('http://10.0.0.2:5010/currentjson/1/')
+    r = requests.get(TESLALOGGER_BASEURL + 'currentjson/1/')
     return r.json()
 
 
