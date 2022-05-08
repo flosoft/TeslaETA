@@ -38,7 +38,7 @@ def map(shortuuid):
 
         if expiry > time.time():
             teslalogger = requests.get(TESLALOGGER_BASEURL + 'currentjson/1/')
-            return render_template('map-lite.html',
+            return render_template('map.html',
                                    mbtoken=MAPBOX_TOKEN,
                                    start=[teslalogger.json()['longitude'],
                                           teslalogger.json()['latitude']],
