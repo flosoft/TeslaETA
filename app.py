@@ -11,10 +11,10 @@ import flask_login
 load_dotenv()
 MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN')
 TESLALOGGER_BASEURL = os.getenv('TESLALOGGER_BASEURL')
-TESLALOGGER_CARID = os.getenv('TESLALOGGER_CARID')
-BASE_URL = os.getenv('BASE_URL')
-PORT = os.getenv('PORT')
-DATA_DIR = os.getenv('DATA_DIR')
+TESLALOGGER_CARID = os.getenv('TESLALOGGER_CARID', 1)
+BASE_URL = os.getenv('BASE_URL', '/map')
+PORT = os.getenv('PORT', 5051)
+DATA_DIR = os.getenv('DATA_DIR', '/data/')
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
 
@@ -24,7 +24,7 @@ login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
 
 # User Mapping here
-users = {'admin': {'password': os.getenv('ADMIN_PASSWORD')}}
+users = {'admin': {'password': os.getenv('ADMIN_PASSWORD', 'password')}}
 
 
 class User(flask_login.UserMixin):
