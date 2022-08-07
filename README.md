@@ -1,3 +1,4 @@
+![TeslaETA](https://github.com/flosoft/TeslaETA/blob/master/TeslaETA-map.png?raw=true)
 # About
 A small Flask Service allowing you to share your ETA on a map based on your [TeslaLogger](https://github.com/bassmaster187/TeslaLogger/) location.
 
