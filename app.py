@@ -127,7 +127,7 @@ def map(shortuuid):
 
 @app.route(BASE_URL + '/carstate/<shortuuid>')
 def carstate(shortuuid):
-    conn = sqlite3.connect('service.db')
+    conn = sqlite3.connect(DATA_DIR + 'service.db')
     cursor = conn.cursor()
     cursor.execute('SELECT lat, lng, expiry FROM shares WHERE shortuuid = ?', [shortuuid])
     result = cursor.fetchone()
@@ -160,7 +160,7 @@ def map_admin():
         expiry_epoch = datetime.strptime(data['expiry'], '%Y-%m-%dT%H:%M').timestamp()
 
 
-        conn = sqlite3.connect('service.db')
+        conn = sqlite3.connect(DATA_DIR + 'service.db')
         cursor = conn.cursor()
         cursor.execute('INSERT INTO shares VALUES (?, ?, ?, ?)', [uuid, data['lat'], data['lng'], expiry_epoch])
         cursor.close()
@@ -170,7 +170,7 @@ def map_admin():
 
         return('Link created - UUID: ' + uuid)
     else:
-        conn = sqlite3.connect('service.db')
+        conn = sqlite3.connect(DATA_DIR + 'service.db')
         cursor = conn.cursor()
         result = cursor.execute('SELECT shortuuid, lat, lng, expiry FROM shares WHERE expiry > ?', [time.time()])
         result = result.fetchall()
