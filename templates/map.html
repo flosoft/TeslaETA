@@ -194,45 +194,11 @@
         getRoute(start);
 
         // Add destination to the map
-        map.loadImage(
-            '/static/map-marker.png',
-            (error, image) => {
-                if (error) throw error;
- 
-                // Add the image to the map style.
-                map.addImage('destination-marker', image);
+        const marker = new mapboxgl.Marker({
+            draggable: false
+        }).setLngLat(end)
+            .addTo(map);
 
-                // Add a data source containing one point feature.
-                map.addSource('point', {
-                    'type': 'geojson',
-                    'data': {
-                        'type': 'FeatureCollection',
-                        'features': [
-                            {
-                                'type': 'Feature',
-                                'geometry': {
-                                    'type': 'Point',
-                                    'coordinates': end
-                                }
-                            }
-                        ]
-                    }
-                });
-                
-                // Add a layer to use the image to represent the data.
-                map.addLayer({
-                    'id': 'points',
-                    'type': 'symbol',
-                    'source': 'point', // reference the data source
-                    'layout': {
-                        'icon-image': 'destination-marker', // reference the image
-                        'icon-size': 0.1
-                    }
-                });
-            }
-        );
-
-        // allow the user to click the map to change the destination
         // Set route destination
         getRoute(end)
 
