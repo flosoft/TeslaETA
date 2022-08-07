@@ -25,7 +25,7 @@
 
         #instructions {
             position: fixed;
-            width: 200px;
+            width: 100px;
             bottom: 0px;
             padding: 20px;
             background-color: #22262e;
@@ -37,12 +37,15 @@
         }
     </style>
     <script src="https://js.sentry-cdn.com/9c5feb5b248b49f79a585804c259febc.min.js" crossorigin="anonymous"></script>
+    <link href="/static/fontawesome/css/fontawesome.min.css" rel="stylesheet">
+    <link href="/static/fontawesome/css/solid.min.css" rel="stylesheet">
 </head>
 <body>
 <div id="map"></div>
 <div id="instructions">
-    <p id="instructions_eta"><strong>ETA:</strong> Calculating... </p>
-    <p id="instructions_distance"><strong>Distance:</strong> Calculating...</p>
+    <p id="instructions_eta"><i class="fa-solid fa-flag-checkered"></i> ... </p>
+    <p id="instructions_distance"><i class="fa-solid fa-route"></i> ...</p>
+    <p id="instructions_charge"><i class="fa-solid fa-battery-empty"></i> ...</p>
 </div>
 <script>
     // Get start and end location from Python Jinja2
@@ -270,7 +273,7 @@
                     '/carstate/{{ shortuuid }}',
                     {method: 'GET'}
                 );
-                const {latitude, longitude, odometer, driving} = await response.json();
+                const {latitude, longitude, odometer, driving, charging, battery_level} = await response.json();
                 // Fly the map to the location.
                 map.flyTo({
                     center: [longitude, latitude],
@@ -296,12 +299,32 @@
                 // get the sidebar and add the instructions
                 // Update ETA on load
                 const instructions_eta = document.getElementById('instructions_eta');
-                instructions_eta.innerHTML = `<strong>ETA:</strong> ${eta.toLocaleTimeString("en-GB",date_options)}`;
+                instructions_eta.innerHTML = `<i class="fa-solid fa-flag-checkered"></i> ${eta.toLocaleTimeString("en-GB",date_options)}`;
 
                 // Update the Distance Estimation based on the Odometer compared to the routing estimate
                 odo_distance = routes_data.distance/1000 + odometer_start[0] - odometer
                 const instructions_distance = document.getElementById('instructions_distance')
-                instructions_distance.innerHTML = `<strong>Distance:</strong> ${Math.round(odo_distance)} km`;
+                instructions_distance.innerHTML = `<i class="fa-solid fa-route"></i> ${Math.round(odo_distance)} km`;
+
+                // Update the Charge Value
+                const instructions_charge = document.getElementById('instructions_charge')
+                if (charging === false) {
+                    if (battery_level >= 80) {
+                        instructions_charge.innerHTML = `<i class="fa-solid fa-battery-full"></i> ${Math.round(battery_level)}%`
+                    } else if (battery_level >= 60) {
+                        instructions_charge.innerHTML = `<i class="fa-solid fa-battery-three-quarters"></i> ${Math.round(battery_level)}%`
+                    } else if (battery_level > 40) {
+                        instructions_charge.innerHTML = `<i class="fa-solid fa-battery-half"></i> ${Math.round(battery_level)}%`
+                    } else if (battery_level > 20) {
+                        instructions_charge.innerHTML = `<i class="fa-solid fa-battery-quarter"></i> ${Math.round(battery_level)}%`
+                    } else {
+                        instructions_charge.innerHTML = `<i class="fa-solid fa-battery-empty"></i> ${Math.round(battery_level)}%`
+                    }
+                } else {
+                    instructions_charge.innerHTML = `<i class="fa-solid fa-charging-station"></i> ${Math.round(battery_level)}%`;
+                }
+
+
 
 
                 // Return the location of the car as GeoJSON.
