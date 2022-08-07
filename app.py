@@ -10,6 +10,7 @@ from datetime import datetime
 load_dotenv()
 MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN')
 TESLALOGGER_BASEURL = os.getenv('TESLALOGGER_BASEURL')
+TESLALOGGER_CARID = os.getenv('TESLALOGGER_CARID')
 app = Flask(__name__)
 
 
@@ -37,7 +38,7 @@ def map(shortuuid):
         print(time.time())
 
         if expiry > time.time():
-            teslalogger = requests.get(TESLALOGGER_BASEURL + 'currentjson/1/')
+            teslalogger = requests.get(TESLALOGGER_BASEURL + 'currentjson/' + TESLALOGGER_CARID + '/')
             return render_template('map.html',
                                    mbtoken=MAPBOX_TOKEN,
                                    start=[teslalogger.json()['longitude'],
