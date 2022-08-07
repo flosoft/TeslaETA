@@ -44,7 +44,8 @@ def map(shortuuid):
                                    start=[teslalogger.json()['longitude'],
                                           teslalogger.json()['latitude']],
                                    end=[lng, lat],
-                                   odometer_start=[teslalogger.json()['odometer']])
+                                   odometer_start=[teslalogger.json()['odometer']],
+                                   shortuuid=shortuuid)
         else:
             return('Link Expired')
     else:
@@ -53,10 +54,27 @@ def map(shortuuid):
 
 
 
-@app.route('/carstate')
-def carstate():  # put application's code here
-    r = requests.get(TESLALOGGER_BASEURL + 'currentjson/1/')
-    return r.json()
+@app.route('/carstate/<shortuuid>')
+def carstate(shortuuid):
+    conn = sqlite3.connect('service.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT lat, lng, expiry FROM shares WHERE shortuuid = ?', [shortuuid])
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if result:
+        lat = result[0]
+        lng = result[1]
+        expiry = result[2]
+
+        if expiry > time.time():
+            teslalogger = requests.get(TESLALOGGER_BASEURL + 'currentjson/' + TESLALOGGER_CARID + '/')
+            return teslalogger.json()
+        else:
+            return('Link Expired')
+    else:
+        return('Link Invalid')
 
 
 @app.route('/map/admin', methods = ['POST', 'GET'])

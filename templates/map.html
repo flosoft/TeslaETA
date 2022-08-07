@@ -267,7 +267,7 @@
             // Make a GET request to the API and return the location of the car.
             try {
                 const response = await fetch(
-                    '/carstate',
+                    '/carstate/{{ shortuuid }}',
                     {method: 'GET'}
                 );
                 const {latitude, longitude, odometer, driving} = await response.json();
