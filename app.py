@@ -13,6 +13,8 @@ MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN')
 TESLALOGGER_BASEURL = os.getenv('TESLALOGGER_BASEURL')
 TESLALOGGER_CARID = os.getenv('TESLALOGGER_CARID')
 BASE_URL = os.getenv('BASE_URL')
+PORT = os.getenv('PORT')
+DATA_DIR = os.getenv('DATA_DIR')
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
 
@@ -88,7 +90,7 @@ def hello_world():
 
 @app.route(BASE_URL + '/<shortuuid>')
 def map(shortuuid):
-    conn = sqlite3.connect('service.db')
+    conn = sqlite3.connect(DATA_DIR + 'service.db')
     cursor = conn.cursor()
     cursor.execute('SELECT lat, lng, expiry FROM shares WHERE shortuuid = ?', [shortuuid])
     result = cursor.fetchone()
@@ -188,4 +190,4 @@ def _jinja2_filter_datetime(date, fmt=None):
     return timestamp
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5051)
+    app.run(host='0.0.0.0', port=PORT)
