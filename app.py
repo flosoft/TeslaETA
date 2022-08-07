@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 import requests
 import os
 from dotenv import load_dotenv
@@ -6,19 +6,87 @@ import sqlite3
 import time
 import shortuuid
 from datetime import datetime
+import flask_login
 
 load_dotenv()
 MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN')
 TESLALOGGER_BASEURL = os.getenv('TESLALOGGER_BASEURL')
 TESLALOGGER_CARID = os.getenv('TESLALOGGER_CARID')
+BASE_URL = os.getenv('BASE_URL')
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY')
 
 
-@app.route('/')
-def hello_world():  # put application's code here
+# Login Code
+login_manager = flask_login.LoginManager()
+login_manager.init_app(app)
+
+# User Mapping here
+users = {'admin': {'password': os.getenv('ADMIN_PASSWORD')}}
+
+
+class User(flask_login.UserMixin):
+    pass
+
+
+@login_manager.user_loader
+def user_loader(email):
+    if email not in users:
+        return
+
+    user = User()
+    user.id = email
+    return user
+
+
+@login_manager.request_loader
+def request_loader(request):
+    email = request.form.get('email')
+    if email not in users:
+        return
+
+    user = User()
+    user.id = email
+    return user
+
+
+@app.route(BASE_URL + '/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        return '''
+               <form action='login' method='POST'>
+                <input type='text' name='email' id='email' placeholder='username'/>
+                <input type='password' name='password' id='password' placeholder='password'/>
+                <input type='submit' name='submit'/>
+               </form>
+               '''
+
+    email = request.form['email']
+    if email in users and request.form['password'] == users[email]['password']:
+        user = User()
+        user.id = email
+        flask_login.login_user(user)
+        return redirect(url_for('map_admin'))
+
+    return 'Bad login'
+
+
+@app.route(BASE_URL + '/logout')
+def logout():
+    flask_login.logout_user()
+    return 'Logged out'
+
+
+@login_manager.unauthorized_handler
+def unauthorized_handler():
+    return redirect(url_for('login'))
+
+
+@app.route(BASE_URL + '/')
+def hello_world():
     return 'Tesla ETA'
 
-@app.route('/map/<shortuuid>')
+@app.route(BASE_URL + '/<shortuuid>')
 def map(shortuuid):
     conn = sqlite3.connect('service.db')
     cursor = conn.cursor()
@@ -45,7 +113,8 @@ def map(shortuuid):
                                           teslalogger.json()['latitude']],
                                    end=[lng, lat],
                                    odometer_start=[teslalogger.json()['odometer']],
-                                   shortuuid=shortuuid)
+                                   shortuuid=shortuuid,
+                                   BASE_URL=BASE_URL)
         else:
             return('Link Expired')
     else:
@@ -54,7 +123,7 @@ def map(shortuuid):
 
 
 
-@app.route('/carstate/<shortuuid>')
+@app.route(BASE_URL + '/carstate/<shortuuid>')
 def carstate(shortuuid):
     conn = sqlite3.connect('service.db')
     cursor = conn.cursor()
@@ -77,7 +146,8 @@ def carstate(shortuuid):
         return('Link Invalid')
 
 
-@app.route('/map/admin', methods = ['POST', 'GET'])
+@app.route(BASE_URL + '/admin', methods = ['POST', 'GET'])
+@flask_login.login_required
 def map_admin():
     if request.method == 'POST':
         # GENERATE SHORTUUID:
@@ -110,7 +180,7 @@ def map_admin():
 
         print(result)
 
-        return render_template('map_admin.html', result=result)
+        return render_template('map_admin.html', result=result, BASE_URL=BASE_URL)
 
 @app.template_filter('fromtimestamp')
 def _jinja2_filter_datetime(date, fmt=None):
