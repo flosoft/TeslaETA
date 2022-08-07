@@ -1,3 +1,5 @@
 .env_sample
 .venv
 data
+.github
+TeslaETA-map.png
