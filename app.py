@@ -43,7 +43,8 @@ def map(shortuuid):
                                    mbtoken=MAPBOX_TOKEN,
                                    start=[teslalogger.json()['longitude'],
                                           teslalogger.json()['latitude']],
-                                   end=[lng, lat])
+                                   end=[lng, lat],
+                                   odometer_start=[teslalogger.json()['odometer']])
         else:
             return('Link Expired')
     else:

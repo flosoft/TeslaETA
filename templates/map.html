@@ -40,12 +40,18 @@
 </head>
 <body>
 <div id="map"></div>
-<div id="instructions"></div>
+<div id="instructions">
+    <p id="instructions_eta"><strong>ETA:</strong> Calculating... </p>
+    <p id="instructions_distance"><strong>Distance:</strong> Calculating...</p>
+</div>
 <script>
-    // an arbitrary start will always be the same
-    // only the end or destination will change
+    // Get start and end location from Python Jinja2
     const start = {{ start }};
     const end = {{ end }};
+    const odometer_start = {{ odometer_start }}
+    var routes_data = undefined
+    //@TODO - Remove temp_i
+    var temp_i = 0
 
     // create map
     mapboxgl.accessToken = '{{ mbtoken }}';
@@ -64,8 +70,8 @@
             {method: 'GET'}
         );
         const json = await query.json();
-        const data = json.routes[0];
-        const route = data.geometry.coordinates;
+        routes_data = json.routes[0];
+        const route = routes_data.geometry.coordinates;
         const geojson = {
             'type': 'Feature',
             'properties': {},
@@ -98,13 +104,6 @@
                 }
             });
         }
-
-        // get the sidebar and add the instructions
-        const instructions = document.getElementById('instructions');
-
-        instructions.innerHTML = `<p><strong>ETA:</strong> ${Math.floor(
-            data.duration / 60
-        )} min</p><p><strong>Distance:</strong> ${Math.round(data.distance / 1000)} km</p>`;
     }
 
     // GET PULSING DOT //
@@ -276,14 +275,34 @@
                     '/carstate',
                     {method: 'GET'}
                 );
-                const {latitude, longitude} = await response.json();
+                const {latitude, longitude, odometer} = await response.json();
                 // Fly the map to the location.
                 map.flyTo({
                     center: [longitude, latitude],
                     speed: 0.5
                 });
 
-                // ONE CUSTOM BLOCK HERE
+                // LOGIC TO UPDATE INSTRUCTIONS 
+                // calculate instructions content
+                // Calculate Arrival Time
+                var eta = new Date();
+                eta.setSeconds(eta.getSeconds() + Math.round(routes_data.duration));
+                const date_options = {
+                    hour12 : false,
+                    hour:  "numeric",
+                    minute: "numeric",seconds:"numeric"
+                }
+        
+                // get the sidebar and add the instructions
+                // Update ETA on load
+                const instructions_eta = document.getElementById('instructions_eta');
+                instructions_eta.innerHTML = `<strong>ETA:</strong> ${eta.toLocaleTimeString("en-GB",date_options)}`;
+
+                // Update the Distance Estimation based on the Odometer compared to the routing estimate
+                odo_distance = routes_data.distance/1000 + odometer_start[0] - odometer
+                const instructions_distance = document.getElementById('instructions_distance')
+                instructions_distance.innerHTML = `<strong>Distance:</strong> ${Math.round(odo_distance)} km`;
+
 
                 // Return the location of the car as GeoJSON.
                 return {
@@ -307,9 +326,6 @@
 
     });
 
-    // While driving = true (TL)
-    // On-Load get trip_distance (TL)
-    // On-Load calculate ETA
 </script>
 </body>
 </html>
