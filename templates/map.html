@@ -229,14 +229,9 @@
             }
         );
 
-
-        
-
         // allow the user to click the map to change the destination
         // Set route destination
         getRoute(end)
-
-
 
         // UPDATE CAR LOCATION BELOW //
 
@@ -275,7 +270,7 @@
                     '/carstate',
                     {method: 'GET'}
                 );
-                const {latitude, longitude, odometer} = await response.json();
+                const {latitude, longitude, odometer, driving} = await response.json();
                 // Fly the map to the location.
                 map.flyTo({
                     center: [longitude, latitude],
@@ -291,6 +286,11 @@
                     hour12 : false,
                     hour:  "numeric",
                     minute: "numeric",seconds:"numeric"
+                }
+
+                // IF driving === false then add 5 seconds (the refresh rate of this async request)
+                if (driving === false) {
+                    eta.setSeconds(eta.getSeconds() + 5);
                 }
         
                 // get the sidebar and add the instructions
