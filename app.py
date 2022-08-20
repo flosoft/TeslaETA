@@ -12,11 +12,12 @@ load_dotenv()
 MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN')
 TESLALOGGER_BASEURL = os.getenv('TESLALOGGER_BASEURL')
 TESLALOGGER_CARID = os.getenv('TESLALOGGER_CARID', 1)
-BASE_URL = os.getenv('BASE_URL', '/map')
+BASE_URL = os.getenv('BASE_URL')
 PORT = os.getenv('PORT', 5051)
 DATA_DIR = os.getenv('DATA_DIR', '/data/')
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
+app.static_url_path(BASE_URL + '/static')
 
 
 # Login Code
