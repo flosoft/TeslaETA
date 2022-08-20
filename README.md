@@ -34,5 +34,7 @@ services:
     - "5051:5051"
 ```
 
+A more in depth guide on how to run it behind Traefik alongside TeslaLogger, can be found [here](https://florianjensen.com/2022/08/20/sharing-your-eta-with-teslaeta/).
+
 ## Manual
 Simply run `app.py` while ensuring you have installed all requirements from `requirements.txt` and the `.env` file has been configured. A virtualenv is recommended.
