@@ -20,7 +20,6 @@ app.secret_key = os.getenv('SECRET_KEY')
 
 # Fix static folder BASE_URL
 app.view_functions["static"] = None
-
 a_new_static_path = BASE_URL + '/static'
 
 # Set the static_url_path property.
@@ -38,9 +37,6 @@ app.url_map._rules_by_endpoint['static'] = []
 app.add_url_rule(f'{a_new_static_path}/<path:filename>',
                  endpoint='static',
                  view_func=app.send_static_file)
-
-
-
 
 
 # Login Code
