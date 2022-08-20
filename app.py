@@ -18,7 +18,9 @@ DATA_DIR = os.getenv('DATA_DIR', '/data/')
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
 
-# Configure Static URL path
+# Fix static folder BASE_URL
+app.view_functions["static"] = None
+
 a_new_static_path = BASE_URL + '/static'
 
 # Set the static_url_path property.
@@ -28,14 +30,17 @@ app.static_url_path = a_new_static_path
 for rule in app.url_map.iter_rules('static'):
     app.url_map._rules.remove(rule)  # There is probably only one.
 
-# Remove the old rule from Map._rules_by_endpoint. In this case we can just
+# Remove the old rule from Map._rules_by_endpoint. In this case we can just 
 # start fresh.
-app.url_map._rules_by_endpoint['static'] = []
+app.url_map._rules_by_endpoint['static'] = []  
 
 # Add the updated rule.
 app.add_url_rule(f'{a_new_static_path}/<path:filename>',
                  endpoint='static',
                  view_func=app.send_static_file)
+
+
+
 
 
 # Login Code
