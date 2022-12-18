@@ -1,37 +1,131 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-gray-100">
 <head>
     <meta charset="UTF-8">
-    <title>Tesla ETA Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+        }
+      </script>
+    <title>Admin - Tesla ETA</title>
 </head>
 <body>
-<table>
-    <tr>
-        <td><b>Expiry</b></td>
-        <td><b>Lat</b></td>
-        <td><b>Long</b></td>
-        <td><b>URL</b></td>
-    </tr>
-    {% for row in result %}
-    <tr>
-        <td>{{ row[3]|fromtimestamp }}</td>
-        <td>{{ row[1] }}</td>
-        <td>{{ row[2] }}</td>
-        <td><a href="{{ BASE_URL }}/{{ row[0] }}">{{ row[0] }}</a></td>
-    </tr>
-    {% endfor %}
-</table>
+    <nav class="bg-gray-800">
+        <div class="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
+          <div class="relative flex h-16 items-center justify-between">
+            <div class="absolute inset-y-0 left-0 flex items-center sm:hidden">
+              
+            </div>
+            <div class="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
+              <div class="flex flex-shrink-0 items-center">
+                <img class="block h-8 w-auto lg:hidden" src="{{ url_for('static', filename='eta-logo.png') }}" alt="TeslaETA">
+                <img class="hidden h-8 w-auto lg:block" src="{{ url_for('static', filename='eta-logo.png') }}" alt="TeslaETA">
+              </div>
+            </div>
+            <div class="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
+                <a href="logout">
+                <button type="button" class="rounded-full bg-gray-800 p-1 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800">
+                    <span class="sr-only">Logout</span>
+                    <!-- Heroicon name: solid/arrow-left-on-rectangle -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                        <path fill-rule="evenodd" d="M7.5 3.75A1.5 1.5 0 006 5.25v13.5a1.5 1.5 0 001.5 1.5h6a1.5 1.5 0 001.5-1.5V15a.75.75 0 011.5 0v3.75a3 3 0 01-3 3h-6a3 3 0 01-3-3V5.25a3 3 0 013-3h6a3 3 0 013 3V9A.75.75 0 0115 9V5.25a1.5 1.5 0 00-1.5-1.5h-6zm5.03 4.72a.75.75 0 010 1.06l-1.72 1.72h10.94a.75.75 0 010 1.5H10.81l1.72 1.72a.75.75 0 11-1.06 1.06l-3-3a.75.75 0 010-1.06l3-3a.75.75 0 011.06 0z" clip-rule="evenodd" />
+                    </svg>                  
+                </button>
+            </a>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div class="hidden sm:block" aria-hidden="true">
+        <div class="py-3">
+        </div>
+    </div>
+
+    <div class="container mx-auto">
+        <div class="mt-10 sm:mt-0">
+            <div class="md:grid md:grid-cols-3 md:gap-6">
+              <div class="md:col-span-1">
+                <div class="px-4 sm:px-0">
+                  <h3 class="text-lg font-medium leading-6 text-gray-900">Active Links</h3>
+                  <p class="mt-1 text-sm text-gray-600">Your currently active links</p>
+                </div>
+              </div>
+              <div class="mt-5 md:col-span-2 md:mt-0">
+                  <div class="overflow-hidden shadow sm:rounded-md">
+                    <div class="bg-white px-4 py-5 sm:p-6">
+                        <div class="table w-full ...">
+                            <div class="table-header-group ...">
+                              <div class="table-row">
+                                <div class="table-cell text-left font-bold">Expiry</div>
+                                <div class="table-cell text-left font-bold">Link</div>
+                              </div>
+                            </div>
+                            <div class="table-row-group">
+                            {% for row in result %}
+                              <div class="table-row">
+                                <div class="table-cell">{{ row[3]|fromtimestamp }}</div>
+                                <div class="table-cell"><a href="{{ BASE_URL }}/{{ row[0] }}"><button class="inline-flex justify-center rounded-md border border-transparent bg-gray-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">View Link</button></a></div>
+                              </div>
+                            {% endfor %}
+                            </div>
+                          </div>
+                        
+
+                    </div>
+                  </div>
+              </div>
+            </div>
+          </div>
+    </div>
 
 
-<form class="generated-form"  method="POST" action="/map/admin"  target="_self">
-   <label for="lat">Lat</label><br>
-   <input type="text" id="lat" name="lat"><br>
-   <label for="lng">Lng:</label><br>
-   <input type="text" id="lng" name="lng"><br>
-   <label for="expiry">Expiry:</label><br>
-   <input type="datetime-local" id="expiry" name="expiry"><br>
-   <input type="submit" value="Submit"><br><br>
-</form>
-<a href="{{ BASE_URL }}/logout">Logout</a>
+    <div class="hidden sm:block" aria-hidden="true">
+        <div class="py-5">
+          <div class="border-t border-gray-200"></div>
+        </div>
+    </div>
+
+    <div class="container mx-auto">
+        <div class="mt-10 sm:mt-0">
+            <div class="md:grid md:grid-cols-3 md:gap-6">
+              <div class="md:col-span-1">
+                <div class="px-4 sm:px-0">
+                  <h3 class="text-lg font-medium leading-6 text-gray-900">Create Link</h3>
+                  <p class="mt-1 text-sm text-gray-600">Create a Link to share your ETA</p>
+                </div>
+              </div>
+              <div class="mt-5 md:col-span-2 md:mt-0">
+                <form action="#" method="POST">
+                  <div class="overflow-hidden shadow sm:rounded-md">
+                    <div class="bg-white px-4 py-5 sm:p-6">
+                      <div class="grid grid-cols-6 gap-6">
+                        <div class="col-span-6 sm:col-span-3">
+                          <label for="lat" class="block text-sm font-medium text-gray-700">Latitude</label>
+                          <input type="text" name="lat" id="lat" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm">
+                        </div>
+          
+                        <div class="col-span-6 sm:col-span-3">
+                          <label for="lng" class="block text-sm font-medium text-gray-700">Longitude</label>
+                          <input type="text" name="lng" id="lng" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm">
+                        </div>
+          
+                        <div class="col-span-6 sm:col-span-4">
+                          <label for="expiry" class="block text-sm font-medium text-gray-700">Expire Link At</label>
+                          <input type="datetime-local" name="expiry" id="expiry" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm">
+                        </div>
+
+                      </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 text-right sm:px-6">
+                      <button type="submit" class="inline-flex justify-center rounded-md border border-transparent bg-gray-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">Create Link</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+    </div>
 </body>
 </html>

@@ -75,22 +75,20 @@ def request_loader(request):
 @app.route(BASE_URL + '/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
-        return '''
-               <form action='login' method='POST'>
-                <input type='text' name='email' id='email' placeholder='username'/>
-                <input type='password' name='password' id='password' placeholder='password'/>
-                <input type='submit' name='submit'/>
-               </form>
-               '''
-
-    email = request.form['email']
-    if email in users and request.form['password'] == users[email]['password']:
-        user = User()
-        user.id = email
-        flask_login.login_user(user)
-        return redirect(url_for('map_admin'))
-
-    return 'Bad login'
+        return render_template('login.html')
+    else:
+        email = request.form['email']
+        if email in users and request.form['password'] == users[email]['password']:
+            if 'remember-me' in request.form:
+                remember_me = True
+            else:
+                remember_me = False
+            user = User()
+            user.id = email
+            flask_login.login_user(user, remember=remember_me)
+            return redirect(url_for('map_admin'))
+        else:
+            return render_template('login.html', success=False)
 
 
 @app.route(BASE_URL + '/logout')
@@ -105,8 +103,8 @@ def unauthorized_handler():
 
 
 @app.route(BASE_URL + '/')
-def hello_world():
-    return 'Tesla ETA'
+def homepage():
+    return render_template('index.html')
 
 @app.route(BASE_URL + '/<shortuuid>')
 def map(shortuuid):
