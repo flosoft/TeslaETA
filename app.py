@@ -75,7 +75,7 @@ def request_loader(request):
 @app.route(BASE_URL + '/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
-        return render_template('login.html')
+        return render_template('login.html.j2')
     else:
         email = request.form['email']
         if email in users and request.form['password'] == users[email]['password']:
@@ -88,7 +88,7 @@ def login():
             flask_login.login_user(user, remember=remember_me)
             return redirect(url_for('map_admin'))
         else:
-            return render_template('login.html', success=False)
+            return render_template('login.html.j2', success=False)
 
 
 @app.route(BASE_URL + '/logout')
@@ -104,7 +104,7 @@ def unauthorized_handler():
 
 @app.route(BASE_URL + '/')
 def homepage():
-    return render_template('index.html')
+    return render_template('index.html.j2')
 
 @app.route(BASE_URL + '/<shortuuid>')
 def map(shortuuid):
@@ -127,7 +127,7 @@ def map(shortuuid):
 
         if expiry > time.time():
             teslalogger = requests.get(TESLALOGGER_BASEURL + 'currentjson/' + TESLALOGGER_CARID + '/')
-            return render_template('map.html',
+            return render_template('map.html.j2',
                                    mbtoken=MAPBOX_TOKEN,
                                    start=[teslalogger.json()['longitude'],
                                           teslalogger.json()['latitude']],
@@ -200,7 +200,7 @@ def map_admin():
 
         print(result)
 
-        return render_template('map_admin.html', result=result, BASE_URL=BASE_URL)
+        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL)
 
 @app.template_filter('fromtimestamp')
 def _jinja2_filter_datetime(date, fmt=None):
