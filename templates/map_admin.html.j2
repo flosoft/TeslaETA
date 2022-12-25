@@ -5,10 +5,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="{{ url_for('static', filename='tailwind.css') }}" rel="stylesheet">
-  <script>
-    tailwind.config = {
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.11.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.11.0/mapbox-gl.js"></script>
+  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+  <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
+  <style>
+    #geocoder-container>div {
+      min-width: 50%;
+      margin-left: 25%;
     }
-  </script>
+  </style>
+
+
   <title>Admin - Tesla ETA</title>
 </head>
 
@@ -137,6 +145,54 @@
           <form action="#" method="POST">
             <div class="overflow-hidden shadow sm:rounded-md">
               <div class="bg-white px-4 py-5 sm:p-6">
+
+                <div id="map" class="w-full h-96 bg-slate-600"></div>
+                <script>
+                  var marker_lat = 0
+                  var marker_lng = 0
+
+                  mapboxgl.accessToken = '{{ mbtoken }}';
+                  const map = new mapboxgl.Map({
+                    container: 'map',
+                    // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
+                    style: 'mapbox://styles/mapbox/navigation-guidance-day-v4',
+                    center: [{{ car_location[0] }}, {{ car_location[1] }}],
+                    zoom: 13
+                    });
+
+                  const geocoder = new MapboxGeocoder({
+                    accessToken: mapboxgl.accessToken,
+                    marker: {
+                      color: '#DC2626',
+                      draggable: true
+                    },
+                    mapboxgl: mapboxgl,
+                    proximity: {
+                      longitude: {{ car_location[0] }},
+                      latitude: {{ car_location[1]}} }
+                      });
+
+                  map.addControl(geocoder);
+
+                  function updateVars() {
+                    marker_lat = geocoder.mapMarker.getLngLat().lat
+                    marker_lng = geocoder.mapMarker.getLngLat().lng
+
+                    document.getElementById("lat").value = marker_lat
+                    document.getElementById("lng").value = marker_lng
+                  };
+
+                  function dragUpdater() {
+                    geocoder.mapMarker.on('dragend', updateVars)
+                  };
+
+                  geocoder.addControl
+
+                  geocoder.on('result', updateVars);
+                  geocoder.on('result', dragUpdater);
+
+                </script>
+
                 <div class="grid grid-cols-6 gap-6">
                   <div class="col-span-6 sm:col-span-3">
                     <label for="lat" class="block text-sm font-medium text-gray-700">Latitude</label>

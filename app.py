@@ -197,10 +197,12 @@ def map_admin():
 
     print(result)
 
+    teslalogger = requests.get(TESLALOGGER_BASEURL + 'currentjson/' + TESLALOGGER_CARID + '/')
+
     if 'uuid' in locals():
-        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL, uuid=uuid)
+        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL, uuid=uuid, mbtoken=MAPBOX_TOKEN, car_location=[teslalogger.json()['longitude'],teslalogger.json()['latitude']])
     else:
-        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL)
+        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL, mbtoken=MAPBOX_TOKEN, car_location=[teslalogger.json()['longitude'],teslalogger.json()['latitude']])
 
 @app.template_filter('fromtimestamp')
 def _jinja2_filter_datetime(date, fmt=None):
