@@ -184,22 +184,22 @@ def map_admin():
         cursor.close()
         conn.commit()
         conn.close()
+    
+    conn = sqlite3.connect(DATA_DIR + 'service.db')
+    cursor = conn.cursor()
+    result = cursor.execute('SELECT shortuuid, lat, lng, expiry FROM shares WHERE expiry > ?', [time.time()])
+    result = result.fetchall()
+    cursor.close()
+    conn.close()
 
+    for row in result:
+        print(datetime.fromtimestamp(row[3]))
 
-        return('Link created - UUID: ' + uuid)
+    print(result)
+
+    if 'uuid' in locals():
+        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL, uuid=uuid)
     else:
-        conn = sqlite3.connect(DATA_DIR + 'service.db')
-        cursor = conn.cursor()
-        result = cursor.execute('SELECT shortuuid, lat, lng, expiry FROM shares WHERE expiry > ?', [time.time()])
-        result = result.fetchall()
-        cursor.close()
-        conn.close()
-
-        for row in result:
-            print(datetime.fromtimestamp(row[3]))
-
-        print(result)
-
         return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL)
 
 @app.template_filter('fromtimestamp')
