@@ -33,6 +33,7 @@ services:
     ports:
     - "5051:5051"
 ```
+You will be able to access the Admin Interface on /admin in your serving directory to create your links to share.
 
 A more in depth guide on how to run it behind Traefik alongside TeslaLogger, can be found [here](https://florianjensen.com/2022/08/20/sharing-your-eta-with-teslaeta/).
 
