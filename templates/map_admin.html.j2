@@ -167,9 +167,17 @@
                       draggable: true
                     },
                     mapboxgl: mapboxgl,
+                    // Limit Search to ~3300km at EU latlongs.
+                    bbox: [
+                      {{ car_location[0] - 30 }},
+                      {{ car_location[1] - 30}},
+                      {{ car_location[0] + 30 }},
+                      {{ car_location[1] + 30}}
+                      ],
                     proximity: {
                       longitude: {{ car_location[0] }},
-                      latitude: {{ car_location[1]}} }
+                      latitude: {{ car_location[1]}}
+                      }
                       });
 
                   map.addControl(geocoder);
