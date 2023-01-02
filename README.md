@@ -28,7 +28,7 @@ A more in depth guide on how to run it behind Traefik alongside TeslaLogger, can
 
 ## .env file
 Copy the `.env_sample` to `.env` and configure the variables. This file will need to be in the folder of your `docker-compose.yml` or in the folder where you will run the script in.
-- `ADMIN_PASSWORD` variable will need to be htpasswd encoded. No need for the username part.
+- `ADMIN_PASSWORD` variable is the password in plaintext for the user "admin"
 - `MAPBOX_TOKEN` will need to be generated [here](https://account.mapbox.com/access-tokens/). A free Mapbox account is required.
 
 ## Option 1 - Docker
@@ -53,4 +53,4 @@ You will need to install the python requirements, `pip install -r requirements.t
 Then you can simply run `docker_init.sh`.
 
 ## Initial Login
-Once the service is up and running, you'll be able to access it on `BASEURL + /admin`, for example `/map/admin`. Just log in with the username `admin` and the password which you sent in `.env` (htpasswd encoded).
+Once the service is up and running, you'll be able to access it on `BASEURL + /admin`, for example `/map/admin`. Just log in with the username `admin` and the password which you sent in `.env`.
