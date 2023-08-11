@@ -7,6 +7,7 @@ import time
 import shortuuid
 from datetime import datetime
 import flask_login
+from geopy.distance import geodesic
 
 load_dotenv()
 MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN')
@@ -126,13 +127,10 @@ def map(shortuuid):
         print(time.time())
 
         if expiry > time.time():
-            teslalogger = requests.get(TESLALOGGER_BASEURL + 'currentjson/' + TESLALOGGER_CARID + '/')
+            teslalogger = carstate(shortuuid)
             return render_template('map.html.j2',
                                    mbtoken=MAPBOX_TOKEN,
-                                   start=[teslalogger.json()['longitude'],
-                                          teslalogger.json()['latitude']],
-                                   end=[lng, lat],
-                                   odometer_start=[teslalogger.json()['odometer']],
+                                   eta_data=teslalogger,
                                    shortuuid=shortuuid,
                                    BASE_URL=BASE_URL)
         else:
@@ -159,11 +157,42 @@ def carstate(shortuuid):
 
         if expiry > time.time():
             teslalogger = requests.get(TESLALOGGER_BASEURL + 'currentjson/' + TESLALOGGER_CARID + '/')
-            return teslalogger.json()
+
+            carstate = {
+                'latitude': teslalogger.json()['latitude'],
+                'longitude': teslalogger.json()['longitude'],
+                'odometer': teslalogger.json()['odometer'],
+                'driving': teslalogger.json()['driving'],
+                'charging': teslalogger.json()['charging'],
+                'battery_level': teslalogger.json()['battery_level'],
+                }
+            
+            # Check if ETA destination is similar and use Tesla provided destination if it's within 250m
+            destination_db = (lat, lng)
+            if teslalogger.json()['active_route_destination']:
+                destination_tesla = (teslalogger.json()['active_route_latitude'], teslalogger.json()['active_route_longitude'])
+                distance = geodesic(destination_db, destination_tesla).km
+
+                if distance < 0.25:
+                    carstate['eta_destination_lat'] = destination_tesla[0]
+                    carstate['eta_destination_lng'] = destination_tesla[1]
+                    carstate['eta_destination_tesla_seconds'] = teslalogger.json()['active_route_minutes_to_arrival'] * 60
+                    carstate['eta_destination_tesla_battery_level'] = teslalogger.json()['active_route_energy_at_arrival']
+                else:
+                    carstate['eta_destination_lat'] = destination_db[0]
+                    carstate['eta_destination_lng'] = destination_db[1]
+                    carstate['eta_waypoint_lat'] = destination_tesla[0]
+                    carstate['eta_waypoint_lng'] = destination_tesla[1]
+
+            else:
+                carstate['eta_destination_lat'] = destination_db[0]
+                carstate['eta_destination_lng'] = destination_db[1]
+            
+            return carstate
         else:
-            return('Link Expired')
+            return('Link Expired'), 410
     else:
-        return('Link Invalid')
+        return('Link Invalid'), 404
 
 
 @app.route(BASE_URL + '/admin', methods = ['POST', 'GET'])
