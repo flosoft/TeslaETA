@@ -42,8 +42,11 @@
     // create a function to make a directions request
     async function getRoute(end) {
         // make directions request using driving-traffic profile
-        const coordinate_string = `${start[0]},${start[1]};${end[0]},${end[1]}`
-
+        {% if eta_data['eta_waypoint_lat'] %}
+            const coordinate_string = `${start[0]},${start[1]};{{ eta_data['eta_waypoint_lng'] }},{{ eta_data['eta_waypoint_lat'] }};${end[0]},${end[1]}`
+        {% else %}
+            const coordinate_string = `${start[0]},${start[1]};${end[0]},${end[1]}`
+        {% endif %}
         const query = await fetch(
             `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinate_string}?steps=true&geometries=geojson&overview=full&access_token=${mapboxgl.accessToken}`,
             {method: 'GET'}
@@ -227,8 +230,11 @@
                 // Calculate Arrival Time
                 var eta = new Date();
 
-                //@TODO Add an if statement here to use Tesla ETA if it's available
+                {% if eta_data['eta_destination_tesla_seconds'] %}
+                eta.setSeconds(eta.getSeconds() + Math.round({{ eta_data['eta_destination_tesla_seconds'] }}));
+                {% else %}
                 eta.setSeconds(eta.getSeconds() + Math.round(routes_data.duration));
+                {%endif %}
                 const date_options = {
                     hour12 : false,
                     hour:  "numeric",
