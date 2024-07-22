@@ -13,17 +13,19 @@ from interfaces.backendfactory import BackendProviderFactory
 
 load_dotenv()
 MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN')
-TESLALOGGER_BASEURL = os.getenv('TESLALOGGER_BASEURL')
-TESLALOGGER_CARID = os.getenv('TESLALOGGER_CARID', 1)
 BASE_URL = os.getenv('BASE_URL')
 PORT = os.getenv('PORT', 5051)
 DATA_DIR = os.getenv('DATA_DIR', '/data/')
 
 BACKEND_PROVIDER = os.getenv('BACKEND_PROVIDER', 'teslalogger')
+BACKEND_PROVIDER_BASE_URL = os.getenv('BACKEND_PROVIDER_BASE_URL')
+BACKEND_PROVIDER_CAR_ID = os.getenv('BACKEND_PROVIDER_CAR_ID', 1)
 
 # Backend provider instanciation
-provider_factory = BackendProviderFactory(BACKEND_PROVIDER)
-backend = provider_factory.get_instance()
+provider_factory = BackendProviderFactory(BACKEND_PROVIDER, BACKEND_PROVIDER_BASE_URL, BACKEND_PROVIDER_CAR_ID)
+provider = provider_factory.get_instance()
+
+provider.refresh_data()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
@@ -161,44 +163,37 @@ def carstate(shortuuid):
     conn.close()
 
     if result:
-        lat = result[0]
-        lng = result[1]
+        db_latitude = result[0]
+        db_longitude = result[1]
         expiry = result[2]
 
         if expiry > time.time():
-            teslalogger = requests.get(TESLALOGGER_BASEURL + 'currentjson/' + TESLALOGGER_CARID + '/')
+            provider.refresh_data()
 
-            carstate = {
-                'latitude': teslalogger.json()['latitude'],
-                'longitude': teslalogger.json()['longitude'],
-                'odometer': teslalogger.json()['odometer'],
-                'driving': teslalogger.json()['driving'],
-                'charging': teslalogger.json()['charging'],
-                'battery_level': teslalogger.json()['battery_level'],
-                }
-            
+            temp_carstate = vars(provider)
+
             # Check if ETA destination is similar and use Tesla provided destination if it's within 250m
-            destination_db = (lat, lng)
-            if teslalogger.json()['active_route_destination']:
-                destination_tesla = (teslalogger.json()['active_route_latitude'], teslalogger.json()['active_route_longitude'])
-                distance = geodesic(destination_db, destination_tesla).km
+            # destination_db = (lat, lng)
+            if provider.active_route_destination:
+                tesla_destination = (provider.active_route_latitude, provider.active_route_longitude)
 
-                if distance < 0.25:
-                    carstate['eta_destination_lat'] = destination_tesla[0]
-                    carstate['eta_destination_lng'] = destination_tesla[1]
-                    carstate['eta_destination_tesla_seconds'] = teslalogger.json()['active_route_minutes_to_arrival'] * 60
-                    carstate['eta_destination_tesla_battery_level'] = teslalogger.json()['active_route_energy_at_arrival']
+                if not db_latitude or not db_longitude:
+                    # If the lat/lon for the destination was not set on the shared link stored in DB, use the destination set in Tesla
+                    temp_carstate['eta_destination_lat'] = provider.active_route_latitude
+                    temp_carstate['eta_destination_lng'] = provider.active_route_longitude
+                    temp_carstate['eta_destination_tesla_seconds'] = provider.active_route_seconds_to_arrival
+                    temp_carstate['eta_destination_tesla_battery_level'] = provider.active_route_energy_at_arrival
                 else:
-                    carstate['eta_destination_lat'] = destination_db[0]
-                    carstate['eta_destination_lng'] = destination_db[1]
-                    carstate['eta_waypoint_lat'] = destination_tesla[0]
-                    carstate['eta_waypoint_lng'] = destination_tesla[1]
+                    temp_carstate['eta_destination_lat'] = db_latitude
+                    temp_carstate['eta_destination_lng'] = db_longitude
+                    temp_carstate['eta_waypoint_lat'] = provider.active_route_latitude
+                    temp_carstate['eta_waypoint_lng'] = provider.active_route_longitude
 
             else:
-                carstate['eta_destination_lat'] = destination_db[0]
-                carstate['eta_destination_lng'] = destination_db[1]
+                temp_carstate['eta_destination_lat'] = provider.latitude
+                temp_carstate['eta_destination_lng'] = provider.longitude
             
-            return carstate
+            return temp_carstate
         else:
             return('Link Expired'), 410
     else:
@@ -236,12 +231,12 @@ def map_admin():
 
     print(result)
 
-    teslalogger = requests.get(TESLALOGGER_BASEURL + 'currentjson/' + TESLALOGGER_CARID + '/')
+    provider.refresh_data()
 
     if 'uuid' in locals():
-        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL, uuid=uuid, mbtoken=MAPBOX_TOKEN, car_location=[teslalogger.json()['longitude'],teslalogger.json()['latitude']])
+        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL, uuid=uuid, mbtoken=MAPBOX_TOKEN, car_location=[provider.longitude, provider.latitude])
     else:
-        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL, mbtoken=MAPBOX_TOKEN, car_location=[teslalogger.json()['longitude'],teslalogger.json()['latitude']])
+        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL, mbtoken=MAPBOX_TOKEN, car_location=[provider.longitude, provider.latitude])
 
 @app.template_filter('fromtimestamp')
 def _jinja2_filter_datetime(date, fmt=None):
