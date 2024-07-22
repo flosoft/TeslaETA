@@ -9,6 +9,8 @@ from datetime import datetime
 import flask_login
 from geopy.distance import geodesic
 
+from interfaces.backendfactory import BackendProviderFactory
+
 load_dotenv()
 MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN')
 TESLALOGGER_BASEURL = os.getenv('TESLALOGGER_BASEURL')
@@ -16,6 +18,13 @@ TESLALOGGER_CARID = os.getenv('TESLALOGGER_CARID', 1)
 BASE_URL = os.getenv('BASE_URL')
 PORT = os.getenv('PORT', 5051)
 DATA_DIR = os.getenv('DATA_DIR', '/data/')
+
+BACKEND_PROVIDER = os.getenv('BACKEND_PROVIDER', 'teslalogger')
+
+# Backend provider instanciation
+provider_factory = BackendProviderFactory(BACKEND_PROVIDER)
+backend = provider_factory.get_instance()
+
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
 
@@ -46,6 +55,7 @@ login_manager.init_app(app)
 
 # User Mapping here
 users = {'admin': {'password': os.getenv('ADMIN_PASSWORD', 'password')}}
+
 
 
 class User(flask_login.UserMixin):
