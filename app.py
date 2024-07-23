@@ -8,16 +8,19 @@ import shortuuid
 from datetime import datetime
 import flask_login
 from geopy.distance import geodesic
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from models.database import db
 
 from interfaces.backendfactory import BackendProviderFactory
+
+# Import models for automated database migration
+from models.shares import Shares
 
 load_dotenv()
 MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN')
 BASE_URL = os.getenv('BASE_URL')
 PORT = os.getenv('PORT', 5051)
-DATA_DIR = os.path.normpath(os.getenv('DATA_DIR', '/data/'))
+DATA_DIR = os.path.abspath(os.getenv('DATA_DIR', '/data/'))
 
 BACKEND_PROVIDER = os.getenv('BACKEND_PROVIDER', 'teslalogger')
 BACKEND_PROVIDER_BASE_URL = os.getenv('BACKEND_PROVIDER_BASE_URL')
@@ -28,9 +31,12 @@ app.secret_key = os.getenv('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{DATA_DIR}/service.db"
 
 
-# Create the database instance
-db = SQLAlchemy(app)
+# Use the global db object
+db.init_app(app)
 migrate = Migrate(app,db)
+
+with app.app_context():
+    db.create_all()
 
 # Fix static folder BASE_URL
 app.view_functions["static"] = None
