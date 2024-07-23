@@ -8,6 +8,8 @@ import shortuuid
 from datetime import datetime
 import flask_login
 from geopy.distance import geodesic
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 from interfaces.backendfactory import BackendProviderFactory
 
@@ -15,20 +17,20 @@ load_dotenv()
 MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN')
 BASE_URL = os.getenv('BASE_URL')
 PORT = os.getenv('PORT', 5051)
-DATA_DIR = os.getenv('DATA_DIR', '/data/')
+DATA_DIR = os.path.normpath(os.getenv('DATA_DIR', '/data/'))
 
 BACKEND_PROVIDER = os.getenv('BACKEND_PROVIDER', 'teslalogger')
 BACKEND_PROVIDER_BASE_URL = os.getenv('BACKEND_PROVIDER_BASE_URL')
 BACKEND_PROVIDER_CAR_ID = os.getenv('BACKEND_PROVIDER_CAR_ID', 1)
 
-# Backend provider instanciation
-provider_factory = BackendProviderFactory(BACKEND_PROVIDER, BACKEND_PROVIDER_BASE_URL, BACKEND_PROVIDER_CAR_ID)
-provider = provider_factory.get_instance()
-
-provider.refresh_data()
-
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{DATA_DIR}/service.db"
+
+
+# Create the database instance
+db = SQLAlchemy(app)
+migrate = Migrate(app,db)
 
 # Fix static folder BASE_URL
 app.view_functions["static"] = None
@@ -58,6 +60,11 @@ login_manager.init_app(app)
 # User Mapping here
 users = {'admin': {'password': os.getenv('ADMIN_PASSWORD', 'password')}}
 
+
+provider_factory = BackendProviderFactory(BACKEND_PROVIDER, BACKEND_PROVIDER_BASE_URL, BACKEND_PROVIDER_CAR_ID)
+provider = provider_factory.get_instance()
+
+provider.refresh_data()
 
 
 class User(flask_login.UserMixin):
