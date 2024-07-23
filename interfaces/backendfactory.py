@@ -19,7 +19,7 @@ class BackendProviderFactory:
     def __init__(self, provider_name, base_url, car_id):
         self.provider_name = provider_name
         
-        self.provider = self._load_provider(provider_name, base_url, car_id)
+        BackendProviderFactory.provider = self._load_provider(provider_name, base_url, car_id)
 
     @staticmethod
     def get_instance() -> IBackendProvider:
