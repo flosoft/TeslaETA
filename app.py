@@ -23,6 +23,9 @@ BASE_URL = os.getenv('BASE_URL')
 PORT = os.getenv('PORT', 5051)
 DATA_DIR = os.path.abspath(os.getenv('DATA_DIR', '/data/'))
 
+print(DATA_DIR)
+# return
+
 BACKEND_PROVIDER = os.getenv('BACKEND_PROVIDER', 'teslalogger')
 BACKEND_PROVIDER_BASE_URL = os.getenv('BACKEND_PROVIDER_BASE_URL')
 BACKEND_PROVIDER_CAR_ID = os.getenv('BACKEND_PROVIDER_CAR_ID', 1)
