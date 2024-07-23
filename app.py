@@ -22,10 +22,7 @@ BACKEND_PROVIDER_BASE_URL = os.getenv('BACKEND_PROVIDER_BASE_URL')
 BACKEND_PROVIDER_CAR_ID = os.getenv('BACKEND_PROVIDER_CAR_ID', 1)
 
 # Backend provider instanciation
-provider_factory = BackendProviderFactory(BACKEND_PROVIDER, BACKEND_PROVIDER_BASE_URL, BACKEND_PROVIDER_CAR_ID)
-provider = provider_factory.get_instance()
-
-provider.refresh_data()
+BackendProviderFactory(BACKEND_PROVIDER, BACKEND_PROVIDER_BASE_URL, BACKEND_PROVIDER_CAR_ID)
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
@@ -168,6 +165,7 @@ def carstate(shortuuid):
         expiry = result[2]
 
         if expiry > time.time():
+            provider = BackendProviderFactory.get_instance()
             provider.refresh_data()
 
             temp_carstate = vars(provider)
@@ -231,6 +229,7 @@ def map_admin():
 
     print(result)
 
+    provider = BackendProviderFactory.get_instance()
     provider.refresh_data()
 
     if 'uuid' in locals():
