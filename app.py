@@ -28,9 +28,9 @@ BACKEND_PROVIDER_CAR_ID = os.getenv('BACKEND_PROVIDER_CAR_ID', 1)
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
+
+
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{DATA_DIR}/service.db"
-
-
 # Use the global db object
 db.init_app(app)
 migrate = Migrate(app,db)
@@ -134,24 +134,21 @@ def homepage():
 
 @app.route(BASE_URL + '/<shortuuid>')
 def map(shortuuid):
-    conn = sqlite3.connect(DATA_DIR + 'service.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT lat, lng, expiry FROM shares WHERE shortuuid = ?', [shortuuid])
-    result = cursor.fetchone()
-    cursor.close()
-    conn.close()
+    # conn = sqlite3.connect(DATA_DIR + 'service.db')
+    # cursor = conn.cursor()
+    # cursor.execute('SELECT lat, lng, expiry FROM shares WHERE shortuuid = ?', [shortuuid])
+    # result = cursor.fetchone()
+    # cursor.close()
+    # conn.close()
+
+    result = Shares.query.all()
 
     print(result)
 
     if result:
-        lat = result[0]
-        lng = result[1]
-        expiry = result[2]
-
-        print(expiry)
         print(time.time())
 
-        if expiry > time.time():
+        if result > time.time():
             teslalogger = carstate(shortuuid)
             return render_template('map.html.j2',
                                    mbtoken=MAPBOX_TOKEN,
@@ -168,7 +165,7 @@ def map(shortuuid):
 
 @app.route(BASE_URL + '/carstate/<shortuuid>')
 def carstate(shortuuid):
-    conn = sqlite3.connect(DATA_DIR + 'service.db')
+    conn = sqlite3.connect(DATA_DIR + '/service.db')
     cursor = conn.cursor()
     cursor.execute('SELECT lat, lng, expiry FROM shares WHERE shortuuid = ?', [shortuuid])
     result = cursor.fetchone()
@@ -225,14 +222,14 @@ def map_admin():
         expiry_epoch = datetime.strptime(data['expiry'], '%Y-%m-%dT%H:%M').timestamp()
 
 
-        conn = sqlite3.connect(DATA_DIR + 'service.db')
+        conn = sqlite3.connect(DATA_DIR + '/service.db')
         cursor = conn.cursor()
         cursor.execute('INSERT INTO shares VALUES (?, ?, ?, ?)', [uuid, data['lat'], data['lng'], expiry_epoch])
         cursor.close()
         conn.commit()
         conn.close()
     
-    conn = sqlite3.connect(DATA_DIR + 'service.db')
+    conn = sqlite3.connect(DATA_DIR + '/service.db')
     cursor = conn.cursor()
     result = cursor.execute('SELECT shortuuid, lat, lng, expiry FROM shares WHERE expiry > ?', [time.time()])
     result = result.fetchall()
