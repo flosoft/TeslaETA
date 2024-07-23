@@ -108,8 +108,8 @@
                 <div class="table-row-group">
                   {% for row in result %}
                   <div class="table-row">
-                    <div class="table-cell">{{ row[3]|fromtimestamp }}</div>
-                    <div class="table-cell"><a href="{{ BASE_URL }}/{{ row[0] }}"><button
+                    <div class="table-cell">{{ row.expiry|fromtimestamp }}</div>
+                    <div class="table-cell"><a href="{{ BASE_URL }}/{{ row.shortuuid }}"><button
                           class="inline-flex justify-center rounded-md border border-transparent bg-gray-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">View
                           Link</button></a></div>
                   </div>

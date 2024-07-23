@@ -10,11 +10,12 @@ import flask_login
 from geopy.distance import geodesic
 from flask_migrate import Migrate
 from models.database import db
+import flask_sqlalchemy
 
 from interfaces.backendfactory import BackendProviderFactory
 
 # Import models for automated database migration
-from models.shares import Shares
+from models.share import Share
 
 load_dotenv()
 MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN')
@@ -25,6 +26,9 @@ DATA_DIR = os.path.abspath(os.getenv('DATA_DIR', '/data/'))
 BACKEND_PROVIDER = os.getenv('BACKEND_PROVIDER', 'teslalogger')
 BACKEND_PROVIDER_BASE_URL = os.getenv('BACKEND_PROVIDER_BASE_URL')
 BACKEND_PROVIDER_CAR_ID = os.getenv('BACKEND_PROVIDER_CAR_ID', 1)
+
+# Backend provider instanciation
+BackendProviderFactory(BACKEND_PROVIDER, BACKEND_PROVIDER_BASE_URL, BACKEND_PROVIDER_CAR_ID)
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
@@ -66,11 +70,8 @@ login_manager.init_app(app)
 # User Mapping here
 users = {'admin': {'password': os.getenv('ADMIN_PASSWORD', 'password')}}
 
-
-provider_factory = BackendProviderFactory(BACKEND_PROVIDER, BACKEND_PROVIDER_BASE_URL, BACKEND_PROVIDER_CAR_ID)
-provider = provider_factory.get_instance()
-
-provider.refresh_data()
+# Initiate singleton
+BackendProviderFactory(BACKEND_PROVIDER, BACKEND_PROVIDER_BASE_URL, BACKEND_PROVIDER_CAR_ID)
 
 
 class User(flask_login.UserMixin):
@@ -134,21 +135,12 @@ def homepage():
 
 @app.route(BASE_URL + '/<shortuuid>')
 def map(shortuuid):
-    # conn = sqlite3.connect(DATA_DIR + 'service.db')
-    # cursor = conn.cursor()
-    # cursor.execute('SELECT lat, lng, expiry FROM shares WHERE shortuuid = ?', [shortuuid])
-    # result = cursor.fetchone()
-    # cursor.close()
-    # conn.close()
-
-    result = Shares.query.all()
-
-    print(result)
+    result = db.session.query(Share).where(Share.shortuuid == shortuuid).first()
 
     if result:
         print(time.time())
 
-        if result > time.time():
+        if result.expiry > time.time():
             teslalogger = carstate(shortuuid)
             return render_template('map.html.j2',
                                    mbtoken=MAPBOX_TOKEN,
@@ -165,19 +157,11 @@ def map(shortuuid):
 
 @app.route(BASE_URL + '/carstate/<shortuuid>')
 def carstate(shortuuid):
-    conn = sqlite3.connect(DATA_DIR + '/service.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT lat, lng, expiry FROM shares WHERE shortuuid = ?', [shortuuid])
-    result = cursor.fetchone()
-    cursor.close()
-    conn.close()
+    result = db.session.query(Share).where(Share.shortuuid == shortuuid).first()
 
     if result:
-        db_latitude = result[0]
-        db_longitude = result[1]
-        expiry = result[2]
-
-        if expiry > time.time():
+        if result.expiry > time.time():
+            provider = BackendProviderFactory.get_instance()
             provider.refresh_data()
 
             temp_carstate = vars(provider)
@@ -185,17 +169,15 @@ def carstate(shortuuid):
             # Check if ETA destination is similar and use Tesla provided destination if it's within 250m
             # destination_db = (lat, lng)
             if provider.active_route_destination:
-                tesla_destination = (provider.active_route_latitude, provider.active_route_longitude)
-
-                if not db_latitude or not db_longitude:
+                if not result.lat or not result.lng:
                     # If the lat/lon for the destination was not set on the shared link stored in DB, use the destination set in Tesla
                     temp_carstate['eta_destination_lat'] = provider.active_route_latitude
                     temp_carstate['eta_destination_lng'] = provider.active_route_longitude
                     temp_carstate['eta_destination_tesla_seconds'] = provider.active_route_seconds_to_arrival
                     temp_carstate['eta_destination_tesla_battery_level'] = provider.active_route_energy_at_arrival
                 else:
-                    temp_carstate['eta_destination_lat'] = db_latitude
-                    temp_carstate['eta_destination_lng'] = db_longitude
+                    temp_carstate['eta_destination_lat'] = result.lat
+                    temp_carstate['eta_destination_lng'] = result.lng
                     temp_carstate['eta_waypoint_lat'] = provider.active_route_latitude
                     temp_carstate['eta_waypoint_lng'] = provider.active_route_longitude
 
@@ -218,29 +200,25 @@ def map_admin():
         uuid = shortuuid.uuid()
 
         data = request.form
-        print(data)
+        lat = data['lat']
+        lng = data['lng']
+
+        lat_to_insert = float(lat) if lat else None
+        lng_to_insert = float(lng) if lng else None
         expiry_epoch = datetime.strptime(data['expiry'], '%Y-%m-%dT%H:%M').timestamp()
 
+        new_share = Share(shortuuid=uuid, lat=lat_to_insert , lng=lng_to_insert, expiry=expiry_epoch)
+        db.session.add(new_share)
+        db.session.commit()
 
-        conn = sqlite3.connect(DATA_DIR + '/service.db')
-        cursor = conn.cursor()
-        cursor.execute('INSERT INTO shares VALUES (?, ?, ?, ?)', [uuid, data['lat'], data['lng'], expiry_epoch])
-        cursor.close()
-        conn.commit()
-        conn.close()
-    
-    conn = sqlite3.connect(DATA_DIR + '/service.db')
-    cursor = conn.cursor()
-    result = cursor.execute('SELECT shortuuid, lat, lng, expiry FROM shares WHERE expiry > ?', [time.time()])
-    result = result.fetchall()
-    cursor.close()
-    conn.close()
+    result = db.session.query(Share).where(Share.expiry > time.time()).all()
 
     for row in result:
-        print(datetime.fromtimestamp(row[3]))
+        print(datetime.fromtimestamp(row.expiry))
 
     print(result)
 
+    provider = BackendProviderFactory.get_instance()
     provider.refresh_data()
 
     if 'uuid' in locals():
