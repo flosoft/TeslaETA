@@ -213,7 +213,7 @@
                     '{{ BASE_URL }}/carstate/{{ shortuuid }}',
                     {method: 'GET'}
                 );
-                const {latitude, longitude, odometer, driving, charging, battery_level} = await response.json();
+                const {latitude, longitude, odometer, is_driving, is_charging, battery_level} = await response.json();
                 // Fly the map to the location.
                 map.flyTo({
                     center: [longitude, latitude],
@@ -237,7 +237,7 @@
                 }
 
                 // IF driving === false then add 5 seconds (the refresh rate of this async request)
-                if (driving === false) {
+                if (is_driving === false) {
                     eta.setSeconds(eta.getSeconds() + 5);
                 }
         
@@ -253,7 +253,7 @@
 
                 // Update the Charge Value
                 const instructions_charge = document.getElementById('instructions_charge')
-                if (charging === false) {
+                if (is_charging === false) {
                     if (battery_level >= 80) {
                         instructions_charge.innerHTML = `<i class="fa-solid fa-battery-full"></i> ${Math.round(battery_level)}%`
                     } else if (battery_level >= 60) {
