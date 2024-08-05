@@ -23,9 +23,6 @@ BASE_URL = os.getenv('BASE_URL')
 PORT = os.getenv('PORT', 5051)
 DATA_DIR = os.path.abspath(os.getenv('DATA_DIR', '/data/'))
 
-print(DATA_DIR)
-# return
-
 BACKEND_PROVIDER = os.getenv('BACKEND_PROVIDER', 'teslalogger')
 BACKEND_PROVIDER_BASE_URL = os.getenv('BACKEND_PROVIDER_BASE_URL')
 BACKEND_PROVIDER_CAR_ID = os.getenv('BACKEND_PROVIDER_CAR_ID', 1)
@@ -141,8 +138,6 @@ def map(shortuuid):
     result = db.session.query(Share).where(Share.shortuuid == shortuuid).first()
 
     if result:
-        print(time.time())
-
         if result.expiry > time.time():
             teslalogger = carstate(shortuuid)
             return render_template('map.html.j2',
@@ -154,9 +149,6 @@ def map(shortuuid):
             return('Link Expired')
     else:
         return('Link Invalid')
-
-
-
 
 @app.route(BASE_URL + '/carstate/<shortuuid>')
 def carstate(shortuuid):
@@ -215,11 +207,6 @@ def map_admin():
         db.session.commit()
 
     result = db.session.query(Share).where(Share.expiry > time.time()).all()
-
-    for row in result:
-        print(datetime.fromtimestamp(row.expiry))
-
-    print(result)
 
     provider = BackendProviderFactory.get_instance()
     provider.refresh_data()
