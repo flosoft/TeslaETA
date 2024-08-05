@@ -5,8 +5,8 @@
     <title>Tesla - ShareMyETA</title>
     <meta name="robots" content="noindex, nofollow"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <script src='https://api.mapbox.com/mapbox-gl-js/v2.11.0/mapbox-gl.js'></script>
-    <link href='https://api.mapbox.com/mapbox-gl-js/v2.11.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/v3.5.1/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v3.5.1/mapbox-gl.css' rel='stylesheet' />
 
     <link href="{{ url_for('static', filename='tailwind.css') }}" rel="stylesheet">
 
@@ -34,7 +34,7 @@
     mapboxgl.accessToken = '{{ mbtoken }}';
     const map = new mapboxgl.Map({
         container: 'map', // container id
-        style: 'mapbox://styles/mapbox/navigation-guidance-day-v4', // stylesheet location
+        style: 'mapbox://styles/mapbox/navigation-day-v1', // stylesheet location
         zoom: 12,
         center: start
     });
@@ -80,8 +80,8 @@
                     'line-cap': 'round'
                 },
                 'paint': {
-                    'line-color': '#3887be',
-                    'line-width': 5,
+                    'line-color': '#3887F3',
+                    'line-width': 7.5,
                     'line-opacity': 0.75
                 }
             });
