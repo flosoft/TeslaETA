@@ -177,8 +177,8 @@ def carstate(shortuuid):
                     temp_carstate['eta_waypoint_lng'] = provider.active_route_longitude
 
             else:
-                temp_carstate['eta_destination_lat'] = provider.latitude
-                temp_carstate['eta_destination_lng'] = provider.longitude
+                temp_carstate['eta_destination_lat'] = result.lat
+                temp_carstate['eta_destination_lng'] = result.lng
             
             return temp_carstate
         else:
