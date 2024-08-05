@@ -27,7 +27,24 @@ This is a very rough project at the moment. Currently there is only one user, "a
 A more in depth guide on how to run it behind Traefik alongside TeslaLogger, can be found [here](https://florianjensen.com/2022/08/20/sharing-your-eta-with-teslaeta/).
 
 ## .env file
+> [!WARNING]
+> Please note that the .env file changed between versions 0.3.7 and 0.5.0!
+
 Copy the `.env_sample` to `.env` and configure the variables. This file will need to be in the folder of your `docker-compose.yml` or in the folder where you will run the script in.
+
+| Variable                  | Example                                                                                  | Required |
+|---------------------------|------------------------------------------------------------------------------------------|----------|
+| PORT                      | `5051`                                                                                   | N        |
+| DATA_DIR                  | `/data/`                                                                                 | N        |
+| SECRET_KEY                | `RANDOMLY_GENERATED_HERE`                                                                | Y        |
+| ADMIN_PASSWORD            | `PASSWORD_FOR_ADMIN_PAGE`                                                                | Y        |
+| BASE_URL                  | `/map`                                                                                   | Y        |
+| MAPBOX_TOKEN              | `pk.BLA`                                                                                 | Y        |
+| BACKEND_PROVIDER          | `teslalogger` OR `teslamate`                                                             | N        |
+| BACKEND_PROVIDER_BASE_URL | `http://insert-base-api-here:withport/`<br>TeslaLogger Example: `http://raspberry:5010/` | Y        |
+| BACKEND_PROVIDER_CAR_ID   | `1`                                                                                      | N        |
+| TZ                        | `Europe/Berlin`                                                                          | Y        |
+
 - `ADMIN_PASSWORD` variable is the password in plaintext for the user "admin"
 - `MAPBOX_TOKEN` will need to be generated [here](https://account.mapbox.com/access-tokens/). A free Mapbox account is required.
 
