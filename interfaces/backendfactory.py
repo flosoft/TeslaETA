@@ -13,7 +13,7 @@ class BackendProviderFactory:
         elif name == "teslamate":
             return teslamate.TeslamateBackendProvider(base_url, car_id)
         else:
-            raise Exception(f"Unknown backend provider : {name}. Available choices are 'teslalogger' or 'teslamagte'.")
+            raise Exception(f"Unknown backend provider : {name}. Available choices are 'teslalogger' or 'teslamate'.")
     
     
     def __init__(self, provider_name, base_url, car_id):
