@@ -26,6 +26,7 @@ DATA_DIR = os.path.abspath(os.getenv('DATA_DIR', '/data/'))
 BACKEND_PROVIDER = os.getenv('BACKEND_PROVIDER', 'teslalogger')
 BACKEND_PROVIDER_BASE_URL = os.getenv('BACKEND_PROVIDER_BASE_URL')
 BACKEND_PROVIDER_CAR_ID = os.getenv('BACKEND_PROVIDER_CAR_ID', 1)
+BACKEND_PROVIDER_MULTICAR = os.getenv('BACKEND_PROVIDER_MULTICAR', False)
 
 # Backend provider instanciation
 BackendProviderFactory(BACKEND_PROVIDER, BACKEND_PROVIDER_BASE_URL, BACKEND_PROVIDER_CAR_ID)
@@ -156,6 +157,14 @@ def carstate(shortuuid):
 
     if result:
         if result.expiry > time.time():
+            # Update Attribute for car_id if in DB result else use ENV variable - only if MultiCar is enabled
+            if BACKEND_PROVIDER_MULTICAR == 'True':
+                if result.carid:
+                    new_car_id = result.carid
+                else:
+                    new_car_id = BACKEND_PROVIDER_CAR_ID
+            BackendProviderFactory.provider.car_id = new_car_id
+
             provider = BackendProviderFactory.get_instance()
             provider.refresh_data()
 
@@ -207,14 +216,24 @@ def map_admin():
         db.session.commit()
 
     result = db.session.query(Share).where(Share.expiry > time.time()).all()
+    
+    # Update Attribute for car_id if in DB result else use ENV variable
+    if BACKEND_PROVIDER_MULTICAR == 'True':
+        if request.args.get('carid'):
+            new_car_id = request.args.get('carid')
+        else:
+            new_car_id = BACKEND_PROVIDER_CAR_ID
+        BackendProviderFactory.provider.car_id = new_car_id
+    else:
+        new_car_id = BACKEND_PROVIDER_CAR_ID
 
     provider = BackendProviderFactory.get_instance()
     provider.refresh_data()
 
     if 'uuid' in locals():
-        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL, uuid=uuid, mbtoken=MAPBOX_TOKEN, car_location=[provider.longitude, provider.latitude])
+        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL, uuid=uuid, mbtoken=MAPBOX_TOKEN, car_location=[provider.longitude, provider.latitude], multicar=BACKEND_PROVIDER_MULTICAR, carid=new_car_id)
     else:
-        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL, mbtoken=MAPBOX_TOKEN, car_location=[provider.longitude, provider.latitude])
+        return render_template('map_admin.html.j2', result=result, BASE_URL=BASE_URL, mbtoken=MAPBOX_TOKEN, car_location=[provider.longitude, provider.latitude], multicar=BACKEND_PROVIDER_MULTICAR, carid=new_car_id)
 
 @app.template_filter('fromtimestamp')
 def _jinja2_filter_datetime(date, fmt=None):

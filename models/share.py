@@ -9,3 +9,4 @@ class Share(db.Model):
     lat = db.Column(db.Float, nullable=True)
     lng = db.Column(db.Float, nullable=True)
     expiry = db.Column(db.Integer, nullable=False)
+    carid = db.Column(db.Integer, nullable=True)

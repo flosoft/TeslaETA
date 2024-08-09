@@ -34,15 +34,16 @@ Copy the `.env_sample` to `.env` and configure the variables. This file will nee
 
 | Variable                  | Example                                                                                  | Required |
 |---------------------------|------------------------------------------------------------------------------------------|----------|
-| PORT                      | `5051`                                                                                   | N        |
-| DATA_DIR                  | `/data/`                                                                                 | N        |
+| PORT                      | `5051`                                                                                   | Y        |
+| DATA_DIR                  | `/data/`                                                                                 | Y        |
 | SECRET_KEY                | `RANDOMLY_GENERATED_HERE`                                                                | Y        |
 | ADMIN_PASSWORD            | `PASSWORD_FOR_ADMIN_PAGE`                                                                | Y        |
 | BASE_URL                  | `/map`                                                                                   | Y        |
 | MAPBOX_TOKEN              | `pk.BLA`                                                                                 | Y        |
-| BACKEND_PROVIDER          | `teslalogger` OR `teslamate`                                                             | N        |
+| BACKEND_PROVIDER          | `teslalogger` OR `teslamate`                                                             | Y        |
 | BACKEND_PROVIDER_BASE_URL | `http://insert-base-api-here:withport/`<br>TeslaLogger Example: `http://raspberry:5010/` | Y        |
-| BACKEND_PROVIDER_CAR_ID   | `1`                                                                                      | N        |
+| BACKEND_PROVIDER_CAR_ID   | `1`                                                                                      | Y        |
+| BACKEND_PROVIDER_MULTICAR | `False` OR `True`                                                                        | N        |
 | TZ                        | `Europe/Berlin`                                                                          | Y        |
 
 - `ADMIN_PASSWORD` variable is the password in plaintext for the user "admin"
