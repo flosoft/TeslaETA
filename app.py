@@ -199,6 +199,16 @@ def carstate(shortuuid):
 @app.route(BASE_URL + '/admin', methods = ['POST', 'GET'])
 @flask_login.login_required
 def map_admin():
+    # Update Attribute for car_id if in DB result else use ENV variable
+    if BACKEND_PROVIDER_MULTICAR == 'True':
+        if request.args.get('carid'):
+            new_car_id = request.args.get('carid')
+        else:
+            new_car_id = BACKEND_PROVIDER_CAR_ID
+        BackendProviderFactory.provider.car_id = new_car_id
+    else:
+        new_car_id = BACKEND_PROVIDER_CAR_ID
+
     if request.method == 'POST':
         # GENERATE SHORTUUID:
         uuid = shortuuid.uuid()
@@ -211,21 +221,11 @@ def map_admin():
         lng_to_insert = float(lng) if lng else None
         expiry_epoch = datetime.strptime(data['expiry'], '%Y-%m-%dT%H:%M').timestamp()
 
-        new_share = Share(shortuuid=uuid, lat=lat_to_insert , lng=lng_to_insert, expiry=expiry_epoch)
+        new_share = Share(shortuuid=uuid, lat=lat_to_insert , lng=lng_to_insert, expiry=expiry_epoch, carid=new_car_id)
         db.session.add(new_share)
         db.session.commit()
 
     result = db.session.query(Share).where(Share.expiry > time.time()).all()
-    
-    # Update Attribute for car_id if in DB result else use ENV variable
-    if BACKEND_PROVIDER_MULTICAR == 'True':
-        if request.args.get('carid'):
-            new_car_id = request.args.get('carid')
-        else:
-            new_car_id = BACKEND_PROVIDER_CAR_ID
-        BackendProviderFactory.provider.car_id = new_car_id
-    else:
-        new_car_id = BACKEND_PROVIDER_CAR_ID
 
     provider = BackendProviderFactory.get_instance()
     provider.refresh_data()
