@@ -168,6 +168,9 @@ def carstate(shortuuid):
             provider = BackendProviderFactory.get_instance()
             provider.refresh_data()
 
+            # Reset temp_carstate to make sure we don't carry over information from past trips or other cars
+            temp_carstate = None
+
             temp_carstate = vars(provider)
 
             # Check if ETA destination is similar and use Tesla provided destination if it's within 250m
