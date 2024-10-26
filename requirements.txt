@@ -14,7 +14,7 @@ requests==2.32.0
 setuptools==70.0.0
 shortuuid==1.0.11
 urllib3==1.26.19
-Werkzeug==3.0.3
+Werkzeug==3.0.6
 wheel==0.38.4
 zipp==3.19.1
 flask-login==0.6.3
