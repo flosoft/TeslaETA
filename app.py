@@ -22,6 +22,7 @@ MAPBOX_TOKEN = os.getenv('MAPBOX_TOKEN')
 BASE_URL = os.getenv('BASE_URL')
 PORT = os.getenv('PORT', 5051)
 DATA_DIR = os.path.abspath(os.getenv('DATA_DIR', '/data/'))
+DISABLE_AUTH = os.getenv('DISABLE_AUTH', False)
 
 BACKEND_PROVIDER = os.getenv('BACKEND_PROVIDER', 'teslalogger')
 BACKEND_PROVIDER_BASE_URL = os.getenv('BACKEND_PROVIDER_BASE_URL')
@@ -91,13 +92,20 @@ def user_loader(email):
 
 @login_manager.request_loader
 def request_loader(request):
-    email = request.form.get('email')
-    if email not in users:
-        return
+    # Added IF statement to allow for bypassing auth
+    if DISABLE_AUTH == 'True':
+        user = User()
+        user.id = 'admin'
+        return user
+    
+    else:
+        email = request.form.get('email')
+        if email not in users:
+            return
 
-    user = User()
-    user.id = email
-    return user
+        user = User()
+        user.id = email
+        return user
 
 
 @app.route(BASE_URL + '/login', methods=['GET', 'POST'])

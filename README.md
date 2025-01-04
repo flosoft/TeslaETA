@@ -40,6 +40,7 @@ Copy the `.env_sample` to `.env` and configure the variables. This file will nee
 | ADMIN_PASSWORD            | `PASSWORD_FOR_ADMIN_PAGE`                                                                | Y        |
 | BASE_URL                  | `/map`                                                                                   | Y        |
 | MAPBOX_TOKEN              | `pk.BLA`                                                                                 | Y        |
+| DISABLE_AUTH              | `False`                                                                                  | N        |
 | BACKEND_PROVIDER          | `teslalogger` OR `teslamate`                                                             | Y        |
 | BACKEND_PROVIDER_BASE_URL | `http://insert-base-api-here:withport/`<br>TeslaLogger Example: `http://raspberry:5010/` | Y        |
 | BACKEND_PROVIDER_CAR_ID   | `1`                                                                                      | Y        |
