@@ -44,7 +44,7 @@ Copy the `.env_sample` to `.env` and configure the variables. This file will nee
 | BACKEND_PROVIDER          | `teslalogger` OR `teslamate`                                                             | Y        |
 | BACKEND_PROVIDER_BASE_URL | `http://insert-base-api-here:withport/`<br>TeslaLogger Example: `http://raspberry:5010/` | Y        |
 | BACKEND_PROVIDER_CAR_ID   | `1`                                                                                      | Y        |
-| BACKEND_PROVIDER_MULTICAR | `False` OR `True`                                                                        | N        |
+| BACKEND_PROVIDER_MULTICAR | `False` OR JSON of allowed CarIDs and their Names (see .env_sample)                      | N        |
 | TZ                        | `Europe/Berlin`                                                                          | Y        |
 
 - `ADMIN_PASSWORD` variable is the password in plaintext for the user "admin"

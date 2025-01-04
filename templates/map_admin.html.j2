@@ -234,7 +234,7 @@
     </div>
   </div>
 
-  {% if multicar == 'True' %}
+  {% if cars != 'False' %}
   <div class="hidden sm:block" aria-hidden="true">
     <div class="py-5">
       <div class="border-t border-gray-200"></div>
@@ -258,8 +258,16 @@
                 <div class="grid grid-cols-6 gap-6">
                   <div class="col-span-6 sm:col-span-3">
                     <label for="lat" class="block text-sm font-medium text-gray-700">Car ID</label>
-                    <input type="text" name="carid" id="carid" value="{{ carid }}"
-                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm">
+
+                    <select id="carid" name="carid" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm">
+                    {% for key, value in cars.items() %}
+                      <option value="{{key}}"
+                      {% if key == carid|int %}
+                      selected
+                      {% endif %}
+                      >{{value}}</option>
+                    {% endfor %}
+                    </select>
                   </div>
 
 
