@@ -16,7 +16,7 @@ jobs:
   build-and-push-image:
     runs-on: docker
     container:
-      image: ubuntu:latest
+      image: node:latest
     permissions:
       contents: read
       packages: write
