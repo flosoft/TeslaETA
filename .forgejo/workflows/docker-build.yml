@@ -9,7 +9,7 @@ on:
 
 
 env:
-  REGISTRY: git.jensen.ovh
+  REGISTRY: https://git.jensen.ovh
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
@@ -28,7 +28,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.FORGEJO_ACTIONS_PAT }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
