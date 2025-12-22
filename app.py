@@ -165,6 +165,24 @@ def map(shortuuid):
     else:
         return('Link Invalid')
 
+@app.route(BASE_URL + '/osrm/<shortuuid>')
+def map_osrm(shortuuid):
+    result = db.session.query(Share).where(Share.shortuuid == shortuuid).first()
+
+    if result:
+        if result.expiry > time.time():
+            teslalogger = carstate(shortuuid)
+            return render_template('map-new.html.j2',
+                                   mbtoken=MAPBOX_TOKEN,
+                                   eta_data=teslalogger,
+                                   shortuuid=shortuuid,
+                                   BASE_URL=BASE_URL)
+        else:
+            return('Link Expired')
+    else:
+        return('Link Invalid')
+
+
 @app.route(BASE_URL + '/carstate/<shortuuid>')
 def carstate(shortuuid):
     result = db.session.query(Share).where(Share.shortuuid == shortuuid).first()

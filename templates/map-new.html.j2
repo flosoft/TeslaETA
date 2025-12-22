@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Tesla - ShareMyETA</title>
+    <meta name="robots" content="noindex, nofollow"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <link href="{{ url_for('static', filename='tailwind.css') }}" rel="stylesheet">
+
+    <link href="{{ url_for('static', filename='fontawesome/css/fontawesome.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='fontawesome/css/solid.min.css') }}" rel="stylesheet">
+    
+    <style>
+        .pulsing-dot {
+            width: 20px;
+            height: 20px;
+            background: #ff6464;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 0 0 rgba(255, 100, 100, 0.7);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 100, 100, 0.7);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(255, 100, 100, 0);
+            }
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 100, 100, 0);
+            }
+        }
+        
+        .pulsing-dot-container {
+            background: transparent;
+            border: none;
+        }
+    </style>
+</head>
+<body class="p-0 m-0">
+<div id="map" class="absolute inset-0 w-full"></div>
+<div class="fixed">
+  <div class="fixed bottom-0 left-0 p-6 rounded-tr-lg bg-slate-900 text-white font-sans" style="z-index: 1000;">
+        <p id="instructions_eta"><i class="fa-solid fa-flag-checkered"></i> ... </p>
+        <p id="instructions_distance"><i class="fa-solid fa-route"></i> ...</p>
+        <p id="instructions_charge"><i class="fa-solid fa-battery-empty"></i> ...</p>
+  </div>
+</div>
+<script>
+    // Get start and end location from Python Jinja2
+    // Leaflet uses [lat, lng], Mapbox uses [lng, lat]
+    const start = [{{ eta_data['latitude'] }}, {{ eta_data['longitude'] }}]; 
+    const end = [{{ eta_data['eta_destination_lat'] }}, {{ eta_data['eta_destination_lng'] }}];
+    const odometer_start = {{ eta_data['odometer'] }};
+    var routes_data = undefined;
+
+    // create map
+    const map = L.map('map').setView(start, 13);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    // Add destination marker
+    L.marker(end).addTo(map);
+
+    // Car Icon
+    const carIcon = L.divIcon({
+        className: 'pulsing-dot-container',
+        html: '<div class="pulsing-dot"></div>',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+    });
+
+    let carMarker = L.marker(start, {icon: carIcon}).addTo(map);
+    let routeLayer = null;
+
+    // create a function to make a directions request
+    async function getRoute(endCoords) { // endCoords is [lat, lng]
+        // OSRM expects [lng, lat] string
+        
+        // Construct coordinate string: lng,lat;lng,lat
+        const startLngLat = `${start[1]},${start[0]}`;
+        const endLngLat = `${endCoords[1]},${endCoords[0]}`;
+        
+        let coordinate_string = "";
+        
+        {% if eta_data['eta_waypoint_lat'] %}
+            const waypointLngLat = `{{ eta_data['eta_waypoint_lng'] }},{{ eta_data['eta_waypoint_lat'] }}`;
+            coordinate_string = `${startLngLat};${waypointLngLat};${endLngLat}`;
+        {% else %}
+            coordinate_string = `${startLngLat};${endLngLat}`;
+        {% endif %}
+
+        try {
+            const query = await fetch(
+                `https://router.project-osrm.org/route/v1/driving/${coordinate_string}?overview=full&geometries=geojson`,
+                {method: 'GET'}
+            );
+            const json = await query.json();
+            
+            if (json.code !== 'Ok') {
+                console.error('OSRM Error:', json);
+                return;
+            }
+
+            routes_data = json.routes[0];
+            const route = routes_data.geometry.coordinates; // GeoJSON is [lng, lat]
+            
+            // L.geoJSON handles GeoJSON [lng, lat] correctly
+            const geojson = {
+                'type': 'Feature',
+                'properties': {},
+                'geometry': {
+                    'type': 'LineString',
+                    'coordinates': route
+                }
+            };
+
+            if (routeLayer) {
+                 map.removeLayer(routeLayer);
+            }
+
+            routeLayer = L.geoJSON(geojson, {
+                style: {
+                    color: '#3887F3',
+                    weight: 7.5,
+                    opacity: 0.75,
+                    lineCap: 'round',
+                    lineJoin: 'round'
+                }
+            }).addTo(map);
+            
+            // Fit bounds to route
+            map.fitBounds(routeLayer.getBounds(), {padding: [50, 50]});
+
+        } catch (e) {
+            console.error("Routing failed", e);
+        }
+    }
+
+    // Initialize Route
+    getRoute(end);
+
+    // Update function
+    async function getLocation() {
+        try {
+            const response = await fetch(
+                '{{ BASE_URL }}/carstate/{{ shortuuid }}',
+                {method: 'GET'}
+            );
+            const {latitude, longitude, odometer, is_driving, is_charging, battery_level} = await response.json();
+            
+            const newPos = [latitude, longitude];
+            
+            // Update car marker
+            carMarker.setLatLng(newPos);
+            
+            // Pan map if needed
+            map.panTo(newPos);
+
+            // LOGIC TO UPDATE INSTRUCTIONS 
+            var eta = new Date();
+
+            {% if eta_data['eta_destination_tesla_seconds'] %}
+            eta.setSeconds(eta.getSeconds() + Math.round({{ eta_data['eta_destination_tesla_seconds'] }}));
+            {% else %}
+            // fallback if routes_data is available
+            if (routes_data) {
+                eta.setSeconds(eta.getSeconds() + Math.round(routes_data.duration));
+            }
+            {%endif %}
+            
+            const date_options = {
+                hour12 : false,
+                hour:  "numeric",
+                minute: "numeric",seconds:"numeric"
+            }
+
+            if (is_driving === false) {
+                eta.setSeconds(eta.getSeconds() + 5);
+            }
+    
+            const instructions_eta = document.getElementById('instructions_eta');
+            instructions_eta.innerHTML = `<i class="fa-solid fa-flag-checkered"></i> ${eta.toLocaleTimeString("en-GB",date_options)}`;
+
+            // Distance
+            if (routes_data && routes_data.distance) {
+                const odo_distance = routes_data.distance/1000 + odometer_start - odometer;
+                const instructions_distance = document.getElementById('instructions_distance');
+                instructions_distance.innerHTML = `<i class="fa-solid fa-route"></i> ${Math.round(odo_distance)} km`;
+            }
+
+            // Charge
+            const instructions_charge = document.getElementById('instructions_charge')
+            if (is_charging === false) {
+                if (battery_level >= 80) {
+                    instructions_charge.innerHTML = `<i class="fa-solid fa-battery-full"></i> ${Math.round(battery_level)}%`
+                } else if (battery_level >= 60) {
+                    instructions_charge.innerHTML = `<i class="fa-solid fa-battery-three-quarters"></i> ${Math.round(battery_level)}%`
+                } else if (battery_level > 40) {
+                    instructions_charge.innerHTML = `<i class="fa-solid fa-battery-half"></i> ${Math.round(battery_level)}%`
+                } else if (battery_level > 20) {
+                    instructions_charge.innerHTML = `<i class="fa-solid fa-battery-quarter"></i> ${Math.round(battery_level)}%`
+                } else {
+                    instructions_charge.innerHTML = `<i class="fa-solid fa-battery-empty"></i> ${Math.round(battery_level)}%`
+                }
+            } else {
+                instructions_charge.innerHTML = `<i class="fa-solid fa-charging-station"></i> ${Math.round(battery_level)}%`;
+            }
+
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    // Poll every 5 seconds
+    setInterval(getLocation, 5000);
+    
+</script>
+</body>
+</html>
