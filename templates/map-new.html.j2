@@ -49,12 +49,10 @@
 </head>
 <body class="p-0 m-0">
 <div id="map" class="absolute inset-0 w-full"></div>
-<div class="fixed">
-  <div class="fixed bottom-0 left-0 p-6 rounded-tr-lg bg-slate-900 text-white font-sans" style="z-index: 1000;">
+<div class="fixed bottom-0 left-0 p-6 rounded-tr-lg bg-slate-900 text-white font-sans" style="z-index: 9999;">
         <p id="instructions_eta"><i class="fa-solid fa-flag-checkered"></i> ... </p>
         <p id="instructions_distance"><i class="fa-solid fa-route"></i> ...</p>
         <p id="instructions_charge"><i class="fa-solid fa-battery-empty"></i> ...</p>
-  </div>
 </div>
 <script>
     // Get start and end location from Python Jinja2
