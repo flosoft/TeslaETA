@@ -11,7 +11,7 @@ MarkupSafe==3.0.3
 pip==26.0.1
 python-dotenv==1.2.1
 requests==2.32.5
-setuptools==80.10.2
+setuptools==81.0.0
 shortuuid==1.0.13
 urllib3==2.6.3
 Werkzeug==3.1.5
