@@ -4,7 +4,8 @@ import requests
 class TeslamateBackendProvider(IBackendProvider):
     def refresh_data(self):
 
-        data = requests.get(f"{self.base_url}/api/v1/cars/{self.car_id}/status").json()["data"]["status"]
+        req_result = requests.get(f"{self.base_url}/api/v1/cars/{self.car_id}/status").json()
+        data = req_result["data"]["status"]
 
         self.state.latitude = data["car_geodata"]["latitude"]
         self.state.longitude = data["car_geodata"]["longitude"]

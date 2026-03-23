@@ -2,15 +2,18 @@
 
     <mgl-map *ngIf="this.initialState != undefined" class="container" [style]="'mapbox://styles/mapbox/streets-v12'"
         [zoom]="[15]" [center]="[this.initialState!.longitude, this.initialState!.latitude]"
-        (mapCreate)="mapCreate($event)">
+        (mapCreate)="mapCreate($event)" (mapLoad)="mapLoad($event)">
 
         <mgl-layer *ngIf="mainRoute" id="mainroute" type="line" [source]="mainRoute" [paint]="{
               'line-color': '#627BC1',
               'line-width': 5
             }"></mgl-layer>
+        
 
-        <mgl-marker *ngIf="this.currentState?.latitude != undefined || this.currentState?.longitude != undefined"
-            [lngLat]="[this.currentState!.longitude!, this.currentState!.latitude!]"></mgl-marker>
+        <!-- <mgl-marker *ngIf="this.currentState?.latitude != undefined || this.currentState?.longitude != undefined"
+            [lngLat]="[this.currentState!.longitude!, this.currentState!.latitude!]">
+        </mgl-marker> -->
+
     </mgl-map>
 
     <div id="main-overlay">

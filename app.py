@@ -89,25 +89,26 @@ def get_car_state(shortuuid):
     share_helper.is_share_valid(shortuuid)
     
     provider = BackendProviderFactory.get_instance()
+    provider.refresh_data()
     
     
-    global temp_latitude
-    global temp_longitude
+    # global temp_latitude
+    # global temp_longitude
     
-    if temp_latitude == 0:
-        provider.refresh_data()
-        temp_latitude = provider.state.latitude 
-        temp_longitude = provider.state.longitude
+    # if temp_latitude == 0:
+    #     provider.refresh_data()
+    #     temp_latitude = provider.state.latitude 
+    #     temp_longitude = provider.state.longitude
     
-    temp_latitude += 0.001
-    temp_longitude += 0.001
+    # temp_latitude += 0.001
+    # temp_longitude += 0.001
 
-    # Temporary fake data
-    provider.state.active_route_destination = "Hello"
-    provider.state.active_route_longitude = 6.617034
-    provider.state.active_route_latitude = 46.555974
-    provider.state.latitude = temp_latitude
-    provider.state.longitude = temp_longitude
+    # # Temporary fake data
+    # provider.state.active_route_destination = "Hello"
+    # provider.state.active_route_longitude = 6.617034
+    # provider.state.active_route_latitude = 46.555974
+    # provider.state.latitude = temp_latitude
+    # provider.state.longitude = temp_longitude
     
     return provider.state
 

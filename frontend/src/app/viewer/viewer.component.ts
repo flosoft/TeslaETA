@@ -1,7 +1,7 @@
 import { environment } from '../../environments/environment';
 import { Component, OnInit, AfterViewInit, } from '@angular/core';
 import * as mapboxgl from 'mapbox-gl';
-import { MapOptions } from 'mapbox-gl';
+import { MapboxOptions } from 'mapbox-gl';
 import { NgxMapboxGLModule } from 'ngx-mapbox-gl';
 import { MatCardModule } from '@angular/material/card';
 import { HttpClient } from '@angular/common/http';
@@ -37,8 +37,11 @@ export class ViewerComponent {
     public latestDestinationLng: number = 0
 
     mapIsInteracting = false
+    mapIsCentering = false
 
     public pulsingDot?: PulsingDot
+    public pulsingDotSource?: mapboxgl.GeoJSONSourceRaw
+
 
     constructor(
         private _http: HttpClient,
@@ -49,7 +52,7 @@ export class ViewerComponent {
 
     ngOnInit(): void {
         const share_shortuuid = this._router.url.replace(/^\/|\/$/g, '');
-        // this.initAutoRefresh(share_shortuuid)
+        this.initAutoRefresh(share_shortuuid)
 
         this._apiService.getState(share_shortuuid).subscribe(state => { this.initialState = state; this.currentState = state })
 
@@ -58,12 +61,6 @@ export class ViewerComponent {
     mapCreate(event: mapboxgl.Map): void {
         this.map = event
         this.addMapInteractionsEvents()
-
-
-        this.pulsingDot = new PulsingDot(this.map)
-
-
-
 
     }
 
@@ -74,25 +71,63 @@ export class ViewerComponent {
             console.log("MAP IS IDLE")
         })
 
-        let interactEvents = ["click", "touchstart"]
+        let interactEvents = ["click", "touchstart", "dragstart", "zoomstart"]
         interactEvents.forEach(ev => this.map!.on(ev, () => { this.mapIsInteracting = true; console.log("MAP INTERACTING") }))
+
+        // this.map!.on('zo')
+        this.map!.on('flyend', () => {
+            this.mapIsCentering = false
+        })
+
+        this.map!.on('flystart', () => {
+            this.mapIsCentering = true
+        })
 
         // this.map!.on("dragstart", () => { console.log("DRAGGING HAS STARTED") })
     }
 
     initAutoRefresh(share_shortuuid: string): void {
         // Start a timer for auto-refreshing the state
-        timer(0, 200).pipe(
+        timer(0, 500).pipe(
             switchMap(() => this._apiService.getState(share_shortuuid)),
         ).subscribe(result => this.updateState(result))
     }
 
     mapLoad(event: any): void {
-        this.map?.once('render', () => {
-            this.map?.resize()
-        })
+        this.pulsingDot = new PulsingDot(this.map!)
 
-        this.map?.addImage('pulsing-dot', this.pulsingDot!, { pixelRatio: 2 })
+        this.map!.addImage('pulsing-dot', this.pulsingDot!, {pixelRatio: 1})
+
+        this.pulsingDotSource = {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: [
+                    {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [0, 0]
+                        },
+                        properties: null
+                    }
+                ]
+            }
+        }
+
+        this.map!.addSource('pulsing-dot', this.pulsingDotSource!);
+
+        this.map!.addLayer({
+            id: 'layer-with-pulsing-dot',
+            type: 'symbol',
+            source: 'pulsing-dot',
+            layout: {
+                'icon-image': 'pulsing-dot',
+            //   'icon-size': 0.25
+            }
+        });
+
+        // this.map.
     }
 
     updateState(state: StateDTO): void {
@@ -102,8 +137,6 @@ export class ViewerComponent {
         }
 
         this.currentState = state
-
-        console.log(state)
 
         if (state.active_route_latitude && state.active_route_longitude) {
             // If the last saved destination is different than the one sent by the API, re-calculate the route
@@ -118,24 +151,35 @@ export class ViewerComponent {
         }
 
         this.centerMapIfNotDragging()
+
+        let newSourceData : GeoJSON.Feature<GeoJSON.Geometry> = {
+            type: 'Feature',
+            geometry: {
+                type: 'Point',
+                coordinates: [state.longitude, state.latitude]
+            },
+            properties: {}
+        }
+
+        let sourceToUpdate = this.map!.getSource("pulsing-dot") as mapboxgl.GeoJSONSource
+        sourceToUpdate.setData(newSourceData)
     }
 
     centerMapIfNotDragging(): void {
-        console.log(this.mapIsInteracting)
-        if (!this.mapIsInteracting) {
+        if (!this.mapIsInteracting && !this.mapIsCentering) {
             this.map!.flyTo({
                 center: [this.currentState!.longitude, this.currentState!.latitude],
                 essential: true,
                 zoom: 15,
                 speed: 0.3,
-                maxDuration: 900
+                maxDuration: 5000
             })
         }
     }
 
     test(): void {
         this.map?.resize()
-        this.loadDirectionGeometry(46.537208, 6.633734, 46.539263, 6.531669)
+        this.loadDirectionGeometry(this.currentState!.latitude, this.currentState!.longitude, this.currentState!.active_route_latitude!, this.currentState!.active_route_longitude!)
 
 
 
@@ -147,7 +191,6 @@ export class ViewerComponent {
 
         this._http.get<any>(`${mapboxApiPrefix}/${startLng},${startLat};${endLng},${endLat}?access_token=${environment.mapboxToken}&geometries=geojson&overview=full`)
             .subscribe(res => {
-                console.log(res);
                 this.mainRoute = {
                     type: 'geojson',
                     data: {
