@@ -17,6 +17,7 @@
     </mgl-map>
 
     <div id="main-overlay">
+        <span class="connection-dot" [ngStyle]="{'background-color': isConnected ? '#4CAF50' : '#9E9E9E'}" title="WebSocket {{isConnected ? 'connected' : 'disconnected'}}"></span>
         <mat-card appearance="outlined">
             <mat-card-content>Simple card</mat-card-content>
             <button mat-raised-button color="primary" (click)="test()">Test</button>

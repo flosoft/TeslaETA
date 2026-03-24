@@ -6,6 +6,7 @@ export class StateDTO {
     is_driving!: Boolean
     is_charging!: Boolean
     battery_level!: number
+    heading?: number
 
     active_route_destination?: string
     active_route_latitude?: number

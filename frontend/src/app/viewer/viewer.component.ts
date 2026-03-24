@@ -1,5 +1,5 @@
 import { environment } from '../../environments/environment';
-import { Component, OnInit, AfterViewInit, } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import * as mapboxgl from 'mapbox-gl';
 import { MapboxOptions } from 'mapbox-gl';
 import { NgxMapboxGLModule } from 'ngx-mapbox-gl';
@@ -8,10 +8,10 @@ import { HttpClient } from '@angular/common/http';
 import { MatButton, MatButtonModule } from '@angular/material/button';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../services/api/api.service';
+import { WsService } from '../services/ws/ws.service';
 import { Router } from '@angular/router';
 import { StateDTO } from '../../dtos/state-dto';
-import { catchError, of, share, switchMap, timer } from 'rxjs';
-import { PulsingDot } from '../helpers/pulsing-dot';
+import { Subscription } from 'rxjs';
 
 
 @Component({
@@ -26,7 +26,7 @@ import { PulsingDot } from '../helpers/pulsing-dot';
     templateUrl: './viewer.component.html',
     styleUrl: './viewer.component.scss'
 })
-export class ViewerComponent {
+export class ViewerComponent implements OnInit, OnDestroy {
     map: mapboxgl.Map | undefined;
     mainRoute: any;
 
@@ -39,19 +39,23 @@ export class ViewerComponent {
     mapIsInteracting = false
     mapIsCentering = false
 
-    public pulsingDot?: PulsingDot
-    public pulsingDotSource?: mapboxgl.GeoJSONSourceRaw
+    private lastHeading: number = 0
 
+    isConnected = false
+    private _wsSub?: Subscription
+    private _connectedSub?: Subscription
 
     constructor(
         private _http: HttpClient,
         private _apiService: ApiService,
+        private _wsService: WsService,
         private _router: Router
     ) { }
 
 
     ngOnInit(): void {
         const share_shortuuid = this._router.url.replace(/^\/|\/$/g, '');
+        this._connectedSub = this._wsService.connected$.subscribe(connected => this.isConnected = connected);
         this.initAutoRefresh(share_shortuuid)
 
         this._apiService.getState(share_shortuuid).subscribe(state => { this.initialState = state; this.currentState = state })
@@ -87,47 +91,60 @@ export class ViewerComponent {
     }
 
     initAutoRefresh(share_shortuuid: string): void {
-        // Start a timer for auto-refreshing the state
-        timer(0, 500).pipe(
-            switchMap(() => this._apiService.getState(share_shortuuid)),
-        ).subscribe(result => this.updateState(result))
+        this._wsSub = this._wsService.connect(share_shortuuid).subscribe({
+            next: (state) => this.updateState(state),
+            error: (err) => console.error('WS error:', err)
+        });
+    }
+
+    ngOnDestroy(): void {
+        this._wsSub?.unsubscribe();
+        this._connectedSub?.unsubscribe();
+        this._wsService.disconnect();
     }
 
     mapLoad(event: any): void {
-        this.pulsingDot = new PulsingDot(this.map!)
+        this.map!.loadImage('/assets/car-arrow.png', (error: any, image: any) => {
+            if (error) { console.error('Failed to load car-arrow.png', error); return; }
 
-        this.map!.addImage('pulsing-dot', this.pulsingDot!, {pixelRatio: 1})
+            this.map!.addImage('car-arrow', image);
 
-        this.pulsingDotSource = {
-            type: 'geojson',
-            data: {
-                type: 'FeatureCollection',
-                features: [
-                    {
-                        type: 'Feature',
-                        geometry: {
-                            type: 'Point',
-                            coordinates: [0, 0]
-                        },
-                        properties: null
-                    }
-                ]
-            }
-        }
+            this.map!.addSource('car-arrow', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: [
+                        {
+                            type: 'Feature',
+                            geometry: {
+                                type: 'Point',
+                                coordinates: [0, 0]
+                            },
+                            properties: { heading: 0 }
+                        }
+                    ]
+                }
+            });
 
-        this.map!.addSource('pulsing-dot', this.pulsingDotSource!);
+            this.map!.addLayer({
+                id: 'layer-with-car-arrow',
+                type: 'symbol',
+                source: 'car-arrow',
+                layout: {
+                    'icon-image': 'car-arrow',
+                    'icon-size': 0.4,
+                    'icon-rotate': ['get', 'heading'],
+                    'icon-rotation-alignment': 'map',
+                    'icon-allow-overlap': true,
+                    'icon-ignore-placement': true,
+                }
+            });
 
-        this.map!.addLayer({
-            id: 'layer-with-pulsing-dot',
-            type: 'symbol',
-            source: 'pulsing-dot',
-            layout: {
-                'icon-image': 'pulsing-dot',
-            //   'icon-size': 0.25
+            // If state was already received before the image finished loading, apply it now
+            if (this.currentState) {
+                this.updateState(this.currentState);
             }
         });
-
-        // this.map.
     }
 
     updateState(state: StateDTO): void {
@@ -150,6 +167,10 @@ export class ViewerComponent {
             }
         }
 
+        if (!this.map) {
+            return
+        }
+
         this.centerMapIfNotDragging()
 
         let newSourceData : GeoJSON.Feature<GeoJSON.Geometry> = {
@@ -158,16 +179,20 @@ export class ViewerComponent {
                 type: 'Point',
                 coordinates: [state.longitude, state.latitude]
             },
-            properties: {}
+            properties: { heading: state.heading ?? this.lastHeading }
+        }
+        if (state.heading != null) {
+            this.lastHeading = state.heading
         }
 
-        let sourceToUpdate = this.map!.getSource("pulsing-dot") as mapboxgl.GeoJSONSource
-        sourceToUpdate.setData(newSourceData)
+        const sourceToUpdate = this.map!.getSource("car-arrow") as mapboxgl.GeoJSONSource
+        sourceToUpdate?.setData(newSourceData)
     }
 
     centerMapIfNotDragging(): void {
+        if (!this.map) return
         if (!this.mapIsInteracting && !this.mapIsCentering) {
-            this.map!.flyTo({
+            this.map.flyTo({
                 center: [this.currentState!.longitude, this.currentState!.latitude],
                 essential: true,
                 zoom: 15,
