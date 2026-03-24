@@ -1,5 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import requests, os, time, shortuuid, flask_login, dotenv, bcrypt
+import json
+import dataclasses
+from flask_sock import Sock
+from simple_websocket import ConnectionClosed
 from datetime import datetime
 from geopy.distance import geodesic
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required
@@ -40,6 +44,7 @@ BackendProviderFactory(BACKEND_PROVIDER, BACKEND_PROVIDER_BASE_URL, BACKEND_PROV
 ## Init JWT capabilities
 app.config["JWT_SECRET_KEY"] = JWT_SECRET
 jwt = JWTManager(app)
+sock = Sock(app)
 
 app.secret_key = os.getenv('SECRET_KEY')
 
@@ -150,6 +155,46 @@ def delete_share(shortuuid: str):
 @jwt_required()
 def test():
     return "OK"
+
+
+@sock.route('/ws/<share_uuid>')
+def ws_car_state(ws, share_uuid):
+    # 1. Validate share
+    share = share_helper.is_share_valid(share_uuid)
+    if not share:
+        return
+
+    # 3. Get provider and determine mode
+    provider = BackendProviderFactory.get_instance()
+
+    from backendproviders.teslamate_mqtt import TeslamateMQTTBackendProvider
+
+    if isinstance(provider, TeslamateMQTTBackendProvider):
+        # MQTT push mode: wait on condition variable for state updates
+        condition = provider._condition
+        # Send current state immediately if available
+        if provider.state.latitude is not None:
+            try:
+                ws.send(json.dumps(dataclasses.asdict(provider.state)))
+            except ConnectionClosed:
+                return
+
+        while True:
+            with condition:
+                condition.wait(timeout=30)
+            try:
+                ws.send(json.dumps(dataclasses.asdict(provider.state)))
+            except ConnectionClosed:
+                break
+    else:
+        # Fallback poll mode: poll every 1s and push
+        while True:
+            try:
+                provider.refresh_data()
+                ws.send(json.dumps(dataclasses.asdict(provider.state)))
+            except ConnectionClosed:
+                break
+            time.sleep(1)
 
 
 if __name__ == '__main__':

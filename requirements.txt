@@ -28,3 +28,5 @@ bcrypt==4.2.0
 apiflask==2.0.1
 marshmallow-dataclass==8.7.1
 flask-cors==5.0.0
+paho-mqtt>=2.0
+flask-sock>=0.7
