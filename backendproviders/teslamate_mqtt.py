@@ -7,17 +7,10 @@ import paho.mqtt.client as mqtt
 from dtos.state_dto import StateDTO
 from interfaces.backendinterface import IBackendProvider
 
-
-def _extract_hostname(base_url: str) -> str:
-    """Extract hostname from a full URL or return as-is if already a hostname."""
-    if "://" in base_url:
-        return urlparse(base_url).hostname or base_url
-    return base_url
-
-
 class TeslamateMQTTBackendProvider(IBackendProvider):
-    def __init__(self, base_url, car_id, mqtt_port=1883, mqtt_username=None, mqtt_password=None):
-        super().__init__(base_url, car_id)
+    def __init__(self, hostname, car_id, mqtt_port=1883, mqtt_username=None, mqtt_password=None):
+        super().__init__(hostname, car_id)
+        self.hostname = hostname
         self.mqtt_port = mqtt_port
         self.mqtt_username = mqtt_username
         self.mqtt_password = mqtt_password
@@ -42,8 +35,7 @@ class TeslamateMQTTBackendProvider(IBackendProvider):
         self._client.reconnect_delay_set(min_delay=1, max_delay=64)
 
     def start(self):
-        hostname = _extract_hostname(self.base_url)
-        self._client.connect(hostname, self.mqtt_port, keepalive=60)
+        self._client.connect(self.hostname, self.mqtt_port, keepalive=60)
         self._client.loop_start()
 
     def refresh_data(self):
@@ -96,6 +88,12 @@ class TeslamateMQTTBackendProvider(IBackendProvider):
         elif subtopic == "battery_level":
             try:
                 self.state.battery_level = int(payload_str)
+            except ValueError:
+                pass
+
+        elif subtopic == "heading":
+            try:
+                self.state.heading = float(payload_str)
             except ValueError:
                 pass
 

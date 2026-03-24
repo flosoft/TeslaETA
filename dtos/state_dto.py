@@ -6,6 +6,7 @@ from marshmallow_dataclass import dataclass
 class StateDTO():
     latitude: float = None
     longitude: float = None
+    heading: float = None
     odometer: float = None
     is_driving: bool = False
     is_charging: bool = False
