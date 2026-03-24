@@ -83,6 +83,7 @@ class TeslamateMQTTBackendProvider(IBackendProvider):
                 print(f"TeslamateMQTT: error parsing location: {e}")
 
         elif subtopic == "shift_state":
+            self.state.shift_state = payload_str if payload_str else None
             self.state.is_driving = payload_str in ("D", "R", "N")
 
         elif subtopic == "battery_level":
@@ -105,6 +106,12 @@ class TeslamateMQTTBackendProvider(IBackendProvider):
 
         elif subtopic == "charging_state":
             self.state.is_charging = payload_str == "Charging"
+
+        elif subtopic == "speed":
+            try:
+                self.state.speed = int(payload_str)
+            except ValueError:
+                pass
 
         elif subtopic == "active_route":
             try:

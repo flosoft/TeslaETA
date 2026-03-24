@@ -10,7 +10,10 @@ class StateDTO():
     odometer: float = None
     is_driving: bool = False
     is_charging: bool = False
+    shift_state: str = None
     battery_level: int = 0
+
+    speed: int = None
 
     active_route_destination: str = None
     active_route_latitude: float = None

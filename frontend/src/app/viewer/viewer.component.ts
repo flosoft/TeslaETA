@@ -4,6 +4,7 @@ import * as mapboxgl from 'mapbox-gl';
 import { MapboxOptions } from 'mapbox-gl';
 import { NgxMapboxGLModule } from 'ngx-mapbox-gl';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 import { HttpClient } from '@angular/common/http';
 import { MatButton, MatButtonModule } from '@angular/material/button';
 import { CommonModule } from '@angular/common';
@@ -20,6 +21,7 @@ import { Subscription } from 'rxjs';
         CommonModule,
         NgxMapboxGLModule,
         MatCardModule,
+        MatIconModule,
         MatButtonModule,
         MatButton
     ],
@@ -38,10 +40,13 @@ export class ViewerComponent implements OnInit, OnDestroy {
 
     mapIsInteracting = false
     mapIsCentering = false
+    private _recenterTimer: ReturnType<typeof setTimeout> | null = null
+    private readonly RECENTER_DELAY_MS = 5000
 
     private lastHeading: number = 0
 
     isConnected = false
+    readonly gearStates = ['P', 'R', 'N', 'D'] as const
     private _wsSub?: Subscription
     private _connectedSub?: Subscription
 
@@ -69,25 +74,48 @@ export class ViewerComponent implements OnInit, OnDestroy {
     }
 
     addMapInteractionsEvents(): void {
-        // If the map becomes idle, enable the auto-center feature
-        this.map!.on('idle', () => {
-            this.mapIsInteracting = false
-            console.log("MAP IS IDLE")
+        // movestart fires for BOTH user gestures and programmatic flyTo.
+        // e.originalEvent is only present for genuine user input.
+        this.map!.on('movestart', (e: any) => {
+            if (e.originalEvent) {
+                // User-initiated drag/pinch/scroll — pause auto-centering
+                this.mapIsInteracting = true
+                this.mapIsCentering = false
+                // Cancel any pending recenter timer
+                if (this._recenterTimer) {
+                    clearTimeout(this._recenterTimer)
+                    this._recenterTimer = null
+                }
+            } else {
+                // Programmatic flyTo — mark as centering to block re-entry
+                this.mapIsCentering = true
+            }
         })
 
-        let interactEvents = ["click", "touchstart", "dragstart", "zoomstart"]
-        interactEvents.forEach(ev => this.map!.on(ev, () => { this.mapIsInteracting = true; console.log("MAP INTERACTING") }))
-
-        // this.map!.on('zo')
-        this.map!.on('flyend', () => {
+        // moveend fires when any movement (including flyTo) finishes
+        this.map!.on('moveend', (e: any) => {
             this.mapIsCentering = false
+            if (e.originalEvent) {
+                // User finished a gesture — schedule auto-recenter after delay
+                if (this._recenterTimer) clearTimeout(this._recenterTimer)
+                this._recenterTimer = setTimeout(() => {
+                    this.mapIsInteracting = false
+                    this._recenterTimer = null
+                    this.centerMapIfNotDragging()
+                }, this.RECENTER_DELAY_MS)
+            }
         })
 
-        this.map!.on('flystart', () => {
-            this.mapIsCentering = true
+        // zoomstart via scroll wheel / pinch also counts as user interaction
+        this.map!.on('zoomstart', (e: any) => {
+            if (e.originalEvent) {
+                this.mapIsInteracting = true
+                if (this._recenterTimer) {
+                    clearTimeout(this._recenterTimer)
+                    this._recenterTimer = null
+                }
+            }
         })
-
-        // this.map!.on("dragstart", () => { console.log("DRAGGING HAS STARTED") })
     }
 
     initAutoRefresh(share_shortuuid: string): void {
@@ -101,6 +129,7 @@ export class ViewerComponent implements OnInit, OnDestroy {
         this._wsSub?.unsubscribe();
         this._connectedSub?.unsubscribe();
         this._wsService.disconnect();
+        if (this._recenterTimer) clearTimeout(this._recenterTimer);
     }
 
     mapLoad(event: any): void {
@@ -191,24 +220,24 @@ export class ViewerComponent implements OnInit, OnDestroy {
 
     centerMapIfNotDragging(): void {
         if (!this.map) return
-        if (!this.mapIsInteracting && !this.mapIsCentering) {
-            this.map.flyTo({
-                center: [this.currentState!.longitude, this.currentState!.latitude],
-                essential: true,
-                zoom: 15,
-                speed: 0.3,
-                maxDuration: 5000
-            })
-        }
+        if (this.mapIsInteracting || this.mapIsCentering) return
+        this.map.flyTo({
+            center: [this.currentState!.longitude, this.currentState!.latitude],
+            essential: true,
+            zoom: 15,
+            speed: 0.8,
+            maxDuration: 2000
+        })
     }
 
-    test(): void {
-        this.map?.resize()
-        this.loadDirectionGeometry(this.currentState!.latitude, this.currentState!.longitude, this.currentState!.active_route_latitude!, this.currentState!.active_route_longitude!)
-
-
-
-        // this.map.d
+    get minutesToArrival(): string {
+        const mins = this.currentState?.active_route_minutes_to_arrival;
+        if (mins == null) return '--';
+        const total = Math.round(mins);
+        if (total < 60) return `${total} min`;
+        const h = Math.floor(total / 60);
+        const m = total % 60;
+        return m > 0 ? `${h} h ${m} min` : `${h} h`;
     }
 
     loadDirectionGeometry(startLat: number, startLng: number, endLat: number, endLng: number): void {

@@ -17,11 +17,43 @@
     </mgl-map>
 
     <div id="main-overlay">
-        <span class="connection-dot" [ngStyle]="{'background-color': isConnected ? '#4CAF50' : '#9E9E9E'}" title="WebSocket {{isConnected ? 'connected' : 'disconnected'}}"></span>
-        <mat-card appearance="outlined">
-            <mat-card-content>Simple card</mat-card-content>
-            <button mat-raised-button color="primary" (click)="test()">Test</button>
+        <mat-card class="stats-card" appearance="outlined">
+            <mat-card-content>
+                <div class="destination-row" *ngIf="currentState?.active_route_destination">
+                    <mat-icon>place</mat-icon>
+                    <span class="destination-text">{{ currentState?.active_route_destination }}</span>
+                </div>
+                <div class="gear-row">
+                    <ng-container *ngFor="let g of gearStates; let last = last">
+                        <span class="gear" [class.gear--active]="currentState?.shift_state === g || (g === 'P' && !currentState?.shift_state)">{{ g }}</span>
+                        <span class="gear-sep" *ngIf="!last">/</span>
+                    </ng-container>
+                </div>
+                <div class="stat-row">
+                    <mat-icon>speed</mat-icon>
+                    <span>{{ currentState?.speed ?? 0 }} km/h</span>
+                </div>
+                <div class="stat-row">
+                    <mat-icon>battery_full</mat-icon>
+                    <span>
+                        {{ currentState?.battery_level ?? '--' }}%
+                        <ng-container *ngIf="currentState?.active_route_energy_at_arrival != null">
+                            &rarr; {{ currentState?.active_route_energy_at_arrival }}%
+                        </ng-container>
+                    </span>
+                </div>
+                <div class="stat-row" *ngIf="currentState?.active_route_minutes_to_arrival != null">
+                    <mat-icon>schedule</mat-icon>
+                    <span>{{ minutesToArrival }}</span>
+                </div>
+            </mat-card-content>
         </mat-card>
+    </div>
 
+    <div id="connection-overlay">
+        <span class="connection-label" *ngIf="!isConnected">Disconnected</span>
+        <span class="connection-dot"
+              [class.connection-dot--connected]="isConnected"
+              [title]="isConnected ? 'Connected' : 'Disconnected'"></span>
     </div>
 </div>

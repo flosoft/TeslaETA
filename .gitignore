@@ -5,3 +5,5 @@ service.db
 dev/
 *.pyc
 docker-compose.yml
+plans/
+frontend/src/environments/environment.development.ts
