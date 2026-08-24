@@ -203,7 +203,12 @@ def carstate(shortuuid):
             # Reset temp_carstate to make sure we don't carry over information from past trips or other cars
             temp_carstate = None
 
-            temp_carstate = vars(provider)
+            temp_carstate = dict(vars(provider))
+
+            # Always expose the keys the frontend polls for, so a missing/ended
+            # navigation route results in a null value instead of a stale one.
+            temp_carstate['eta_destination_tesla_seconds'] = None
+            temp_carstate['eta_destination_tesla_battery_level'] = None
 
             # Check if ETA destination is similar and use Tesla provided destination if it's within 250m
             # destination_db = (lat, lng)

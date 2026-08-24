@@ -28,6 +28,9 @@
     const end = {{ [eta_data['eta_destination_lng'], eta_data['eta_destination_lat']] }};
     const odometer_start = {{ eta_data['odometer'] }}
     var routes_data = undefined
+    // Fixed arrival timestamp (ms) derived from the routing engine. Anchored once
+    // the route is known so the displayed ETA counts down instead of sliding forward.
+    var route_eta_timestamp = undefined
 
 
     // create map
@@ -53,6 +56,7 @@
         );
         const json = await query.json();
         routes_data = json.routes[0];
+        route_eta_timestamp = Date.now() + Math.round(routes_data.duration) * 1000;
         const route = routes_data.geometry.coordinates;
         const geojson = {
             'type': 'Feature',
@@ -213,7 +217,7 @@
                     '{{ BASE_URL }}/carstate/{{ shortuuid }}',
                     {method: 'GET'}
                 );
-                const {latitude, longitude, odometer, is_driving, is_charging, battery_level} = await response.json();
+                const {latitude, longitude, odometer, is_driving, is_charging, battery_level, eta_destination_tesla_seconds} = await response.json();
                 // Fly the map to the location.
                 map.flyTo({
                     center: [longitude, latitude],
@@ -222,29 +226,29 @@
 
                 // LOGIC TO UPDATE INSTRUCTIONS 
                 // calculate instructions content
-                // Calculate Arrival Time
-                var eta = new Date();
+                // Calculate Arrival Time.
+                // Prefer the live remaining time reported by the car; otherwise fall
+                // back to the fixed arrival timestamp anchored when the route loaded.
+                var eta = null;
 
-                {% if eta_data['eta_destination_tesla_seconds'] %}
-                eta.setSeconds(eta.getSeconds() + Math.round({{ eta_data['eta_destination_tesla_seconds'] }}));
-                {% else %}
-                eta.setSeconds(eta.getSeconds() + Math.round(routes_data.duration));
-                {%endif %}
+                if (eta_destination_tesla_seconds !== undefined && eta_destination_tesla_seconds !== null) {
+                    eta = new Date(Date.now() + Math.round(eta_destination_tesla_seconds) * 1000);
+                } else if (route_eta_timestamp !== undefined) {
+                    eta = new Date(route_eta_timestamp);
+                }
+
                 const date_options = {
                     hour12 : false,
                     hour:  "numeric",
                     minute: "numeric",seconds:"numeric"
                 }
 
-                // IF driving === false then add 5 seconds (the refresh rate of this async request)
-                if (is_driving === false) {
-                    eta.setSeconds(eta.getSeconds() + 5);
-                }
-        
                 // get the sidebar and add the instructions
                 // Update ETA on load
                 const instructions_eta = document.getElementById('instructions_eta');
-                instructions_eta.innerHTML = `<i class="fa-solid fa-flag-checkered"></i> ${eta.toLocaleTimeString("en-GB",date_options)}`;
+                if (eta) {
+                    instructions_eta.innerHTML = `<i class="fa-solid fa-flag-checkered"></i> ${eta.toLocaleTimeString("en-GB",date_options)}`;
+                }
 
                 // Update the Distance Estimation based on the Odometer compared to the routing estimate
                 odo_distance = routes_data.distance/1000 + odometer_start - odometer

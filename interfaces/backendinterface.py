@@ -30,4 +30,6 @@ class IBackendProvider(ABC):
 
     @property
     def active_route_seconds_to_arrival(self) -> float:
+        if self.active_route_minutes_to_arrival is None:
+            return None
         return self.active_route_minutes_to_arrival * 60
