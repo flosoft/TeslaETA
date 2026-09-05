@@ -211,19 +211,31 @@ def carstate(shortuuid):
             temp_carstate['eta_destination_tesla_battery_level'] = None
 
             # Check if ETA destination is similar and use Tesla provided destination if it's within 250m
-            # destination_db = (lat, lng)
             if provider.active_route_destination:
-                if not result.lat or not result.lng:
+                if result.lat is None or result.lng is None:
                     # If the lat/lon for the destination was not set on the shared link stored in DB, use the destination set in Tesla
                     temp_carstate['eta_destination_lat'] = provider.active_route_latitude
                     temp_carstate['eta_destination_lng'] = provider.active_route_longitude
                     temp_carstate['eta_destination_tesla_seconds'] = provider.active_route_seconds_to_arrival
                     temp_carstate['eta_destination_tesla_battery_level'] = provider.active_route_energy_at_arrival
+                elif provider.active_route_latitude is not None and provider.active_route_longitude is not None:
+                    destination_tesla = (provider.active_route_latitude, provider.active_route_longitude)
+                    destination_db = (result.lat, result.lng)
+                    distance = geodesic(destination_db, destination_tesla).km
+
+                    if distance < 0.25:
+                        temp_carstate['eta_destination_lat'] = destination_tesla[0]
+                        temp_carstate['eta_destination_lng'] = destination_tesla[1]
+                        temp_carstate['eta_destination_tesla_seconds'] = provider.active_route_seconds_to_arrival
+                        temp_carstate['eta_destination_tesla_battery_level'] = provider.active_route_energy_at_arrival
+                    else:
+                        temp_carstate['eta_destination_lat'] = destination_db[0]
+                        temp_carstate['eta_destination_lng'] = destination_db[1]
+                        temp_carstate['eta_waypoint_lat'] = destination_tesla[0]
+                        temp_carstate['eta_waypoint_lng'] = destination_tesla[1]
                 else:
                     temp_carstate['eta_destination_lat'] = result.lat
                     temp_carstate['eta_destination_lng'] = result.lng
-                    temp_carstate['eta_waypoint_lat'] = provider.active_route_latitude
-                    temp_carstate['eta_waypoint_lng'] = provider.active_route_longitude
 
             else:
                 temp_carstate['eta_destination_lat'] = result.lat

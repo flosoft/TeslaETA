@@ -32,4 +32,4 @@ class IBackendProvider(ABC):
     def active_route_seconds_to_arrival(self) -> float:
         if self.active_route_minutes_to_arrival is None:
             return None
-        return self.active_route_minutes_to_arrival * 60
+        return float(self.active_route_minutes_to_arrival) * 60
