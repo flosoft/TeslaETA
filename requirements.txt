@@ -1,4 +1,4 @@
-certifi==2026.5.20
+certifi==2026.10.19
 charset-normalizer==3.4.9
 click==8.4.1
 colorama==0.4.6
