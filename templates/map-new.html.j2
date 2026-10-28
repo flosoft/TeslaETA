@@ -64,6 +64,13 @@
     // Fixed arrival timestamp (ms) derived from the routing engine. Anchored once
     // the route is known so the displayed ETA counts down instead of sliding forward.
     var route_eta_timestamp = undefined;
+    const OFF_ROUTE_THRESHOLD_METERS = 100;
+    const OFF_ROUTE_SAMPLES_REQUIRED = 2;
+    const REROUTE_COOLDOWN_MS = 30 * 1000;
+    let offRouteSamples = 0;
+    let lastRerouteAt = 0;
+    let routeRequestInFlight = false;
+    let routeStartsAtCurrentPosition = false;
 
     // create map
     const map = L.map('map').setView(start, 13);
@@ -87,12 +94,47 @@
     let carMarker = L.marker(start, {icon: carIcon}).addTo(map);
     let routeLayer = null;
 
-    // create a function to make a directions request
-    async function getRoute(endCoords) { // endCoords is [lat, lng]
+    // Return the shortest distance from a [lat, lng] point to the route line.
+    // An equirectangular projection is accurate enough at the 100 m threshold.
+    function distanceToRouteMeters(point) {
+        const coordinates = routes_data?.geometry?.coordinates;
+        if (!coordinates || coordinates.length < 2) return Infinity;
+
+        const metersPerDegree = 111320;
+        let shortestDistance = Infinity;
+        for (let index = 0; index < coordinates.length - 1; index++) {
+            const [lng1, lat1] = coordinates[index];
+            const [lng2, lat2] = coordinates[index + 1];
+            const referenceLatitude = ((lat1 + lat2 + point[0]) / 3) * Math.PI / 180;
+            const longitudeScale = metersPerDegree * Math.cos(referenceLatitude);
+            const ax = (lng1 - point[1]) * longitudeScale;
+            const ay = (lat1 - point[0]) * metersPerDegree;
+            const dx = (lng2 - lng1) * longitudeScale;
+            const dy = (lat2 - lat1) * metersPerDegree;
+            const segmentLengthSquared = dx * dx + dy * dy;
+            const projection = segmentLengthSquared === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / segmentLengthSquared));
+            shortestDistance = Math.min(shortestDistance, Math.hypot(ax + projection * dx, ay + projection * dy));
+        }
+        return shortestDistance;
+    }
+
+    function isOffRoute(point) {
+        if (distanceToRouteMeters(point) > OFF_ROUTE_THRESHOLD_METERS) {
+            offRouteSamples++;
+        } else {
+            offRouteSamples = 0;
+        }
+        return offRouteSamples >= OFF_ROUTE_SAMPLES_REQUIRED;
+    }
+
+    // Create a directions request from origin to destination; both are [lat, lng].
+    async function getRoute(origin, endCoords, isReroute = false) {
+        if (routeRequestInFlight) return false;
+        routeRequestInFlight = true;
         // OSRM expects [lng, lat] string
         
         // Construct coordinate string: lng,lat;lng,lat
-        const startLngLat = `${start[1]},${start[0]}`;
+        const startLngLat = `${origin[1]},${origin[0]}`;
         const endLngLat = `${endCoords[1]},${endCoords[0]}`;
         
         let coordinate_string = "";
@@ -118,6 +160,7 @@
 
             routes_data = json.routes[0];
             route_eta_timestamp = Date.now() + Math.round(routes_data.duration) * 1000;
+            routeStartsAtCurrentPosition = isReroute;
             const route = routes_data.geometry.coordinates; // GeoJSON is [lng, lat]
             
             // L.geoJSON handles GeoJSON [lng, lat] correctly
@@ -144,16 +187,20 @@
                 }
             }).addTo(map);
             
-            // Fit bounds to route
-            map.fitBounds(routeLayer.getBounds(), {padding: [50, 50]});
+            // Fit bounds only for the initial route; rerouting should not move the viewer away from the car.
+            if (!isReroute) map.fitBounds(routeLayer.getBounds(), {padding: [50, 50]});
+            return true;
 
         } catch (e) {
             console.error("Routing failed", e);
+            return false;
+        } finally {
+            routeRequestInFlight = false;
         }
     }
 
     // Initialize Route
-    getRoute(end);
+    getRoute(start, end);
     getLocation();
 
     // Update function
@@ -172,6 +219,13 @@
             
             // Pan map if needed
             map.panTo(newPos);
+
+            if (is_driving && !routeRequestInFlight && Date.now() - lastRerouteAt >= REROUTE_COOLDOWN_MS && isOffRoute(newPos)) {
+                if (await getRoute(newPos, end, true)) {
+                    lastRerouteAt = Date.now();
+                }
+                offRouteSamples = 0;
+            }
 
             // LOGIC TO UPDATE INSTRUCTIONS 
             // Prefer the live remaining time reported by the car; otherwise fall
@@ -197,7 +251,9 @@
 
             // Distance
             if (routes_data && routes_data.distance) {
-                const odo_distance = routes_data.distance/1000 + odometer_start - odometer;
+                const odo_distance = routeStartsAtCurrentPosition
+                    ? routes_data.distance / 1000
+                    : routes_data.distance / 1000 + odometer_start - odometer;
                 const instructions_distance = document.getElementById('instructions_distance');
                 instructions_distance.innerHTML = `<i class="fa-solid fa-route"></i> ${Math.round(odo_distance)} km`;
             }
